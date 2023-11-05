@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.html import mark_safe
 
 # Create your models here.
 from django.db import models
@@ -28,6 +29,9 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def img_preview(self): 
+        return mark_safe(f'<img src = "{self.image.url}" width = "200" height = "200"/>')
 
 class User(models.Model):
     username = models.CharField(max_length=255)
