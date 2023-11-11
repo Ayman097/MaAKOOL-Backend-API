@@ -110,4 +110,33 @@ def delete_product(request, id):
 
     return Response({"product": 'Deleted Successfully'})
 
+# Create Category
+@api_view(['POST'])
+def new_category(request):
+    data = request.data
     
+    category = Category.objects.create(name=data['name'])
+
+    serializer = CategorySerializer(category)
+    return Response(serializer.data)
+
+
+# Update Category
+@api_view(['PUT'])
+def update_category(request, id):
+    category = get_object_or_404(Category, pk=id)
+    
+    category.name = request.data['name']
+    category.save()
+    
+    serializer = CategorySerializer(category)
+    return Response(serializer.data)
+
+# Delete Category
+@api_view(['DELETE'])
+def delete_category(request, id):
+    category = get_object_or_404(Category, pk=id)
+    category.delete()
+    
+    
+    return Response({"category": 'Deleted Successfully'})
