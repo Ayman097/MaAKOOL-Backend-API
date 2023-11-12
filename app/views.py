@@ -7,13 +7,15 @@ from rest_framework import status
 from .models import Product, Category
 from .serializers import ProductSerializer, CategorySerializer
 from decimal import Decimal
+from .filters import ProductFilter
 
 # Create your views here.
 @api_view()
 def product_list(request):
     products = Product.objects.all()
     #print(products)
-    serializer = ProductSerializer(products, many=True)
+    filterset = ProductFilter(request.GET, queryset=products)
+    serializer = ProductSerializer(filterset.qs, many=True)
     print(serializer.data)
     
     return Response(serializer.data)
