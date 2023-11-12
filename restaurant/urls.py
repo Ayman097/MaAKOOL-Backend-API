@@ -1,6 +1,5 @@
 """
 URL configuration for restaurant project.
-
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/4.2/topics/http/urls/
 Examples:
@@ -14,6 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -24,8 +24,8 @@ urlpatterns = [
     path("resturant/", include("app.urls")),
     path("account/", include("account.urls")),
     path("orders/", include("order.urls")),
-    # path('api-auth/', include('rest_framework.urls'))
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

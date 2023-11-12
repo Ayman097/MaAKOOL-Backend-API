@@ -5,15 +5,13 @@ from django.utils.html import format_html
 
 
 
-
-
 # @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ['name', 'price', 'img_preview']
     list_editable = ['price']
     readonly_fields = ['img_preview']
 
-    
+
 admin.site.register(models.Product, ProductAdmin)
 
 
