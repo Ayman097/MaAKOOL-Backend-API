@@ -1,6 +1,7 @@
 # views.py
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from rest_framework import status
 from app.models import Product
 from order.models import Order, OrderItems
@@ -100,3 +101,23 @@ class OrderItemsViewSet(viewsets.ModelViewSet):
                 {"message": "Item not found in the order"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+from django.utils import timezone
+
+
+@api_view(["POST"])
+def submit_order(request):
+    order = Order.objects.filter(ordered=False).first()  # هنا هزود اني ادور باليوزر
+    if order:
+        order.ordered = True
+        order.status = "Pending"  # Set the status to 'Pending'
+        order.creating_date = timezone.now()
+        order.save()
+        return Response(
+            {"message": "Successfully submitted order"}, status=status.HTTP_200_OK
+        )
+    else:
+        return Response(
+            {"message": "No order found to submit"}, status=status.HTTP_404_NOT_FOUND
+        )

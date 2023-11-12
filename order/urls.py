@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .api.views import OrderViewSet, OrderItemsViewSet
+from .api.views import OrderViewSet, OrderItemsViewSet, submit_order
 
 router = DefaultRouter()
 router.register(r"orders", OrderViewSet)
@@ -23,4 +23,5 @@ urlpatterns = [
         OrderItemsViewSet.as_view({"post": "decrease_from_order"}),
         name="decrease_from_order",
     ),
+    path("submit_order", submit_order, name="submit_order"),
 ]
