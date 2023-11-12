@@ -1,59 +1,97 @@
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import AuthenticationFailed
+from .serializer import UserSerializer
+from .models import User
+import jwt
+import datetime
 
 
-@api_view(['POST'])
-def user_registration(request):
-    if request.method == 'POST':
-        # Retrieve user data from the request
-        username = request.data.get('username')
-        password = request.data.get('password')
-        email = request.data.get('email')
-
-        # Check if any of the required data is missing
-        if not (username and password and email):
-            return Response({'error': 'Please provide a username, password, and email.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if a user with the same username or email already exists
-        if User.objects.filter(username=username).exists() or User.objects.filter(email=email).exists():
-            return Response({'error': 'A user with the same username or email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Create the user
-        user = User.objects.create_user(username=username, password=password, email=email)
-
-        # Check if the user creation was successful
-        if user:
-            # Create or retrieve a token for the user
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key}, status=status.HTTP_201_CREATED)
-        else:
-            return Response({'error': 'Failed to create the user.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+class RegisterView(APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
-@api_view(['POST'])
-def user_login(request):
-    if request.method == 'POST':
-        username = request.data.get('username')
-        password = request.data.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key}, status=status.HTTP_200_OK)
-        return Response(status=status.HTTP_401_UNAUTHORIZED)
+class LoginView(APIView):
+    def post(self, request):
+        email = request.data["email"]
+        password = request.data["password"]
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def user_logout(request):
-    if request.method == 'POST':
-        logout(request)
-        return Response(status=status.HTTP_200_OK)
+        user = User.objects.filter(email=email).first()
+
+        if user is None or not user.check_password(password):
+            raise AuthenticationFailed("Invalid credentials.")
+
+        payload = {
+            "id": user.id,
+            "exp": datetime.datetime.utcnow()
+            + datetime.timedelta(minutes=15),  # Shortened expiry time
+            "iat": datetime.datetime.utcnow(),
+        }
+
+        token = jwt.encode(payload, "your_secret_key", algorithm="HS256")
+
+        response = Response()
+        response.set_cookie(
+            key="jwt", value=token, httponly=True
+        )  # Setting JWT as an HTTP-only cookie
+
+        return response
 
 
+class UserView(APIView):
+    def get(self, request):
+        token = request.COOKIES.get("jwt")
+
+        if not token:
+            raise AuthenticationFailed("Unauthenticated.")
+
+        try:
+            payload = jwt.decode(token, "your_secret_key", algorithms=["HS256"])
+            user = User.objects.filter(id=payload["id"]).first()
+
+            if not user:
+                raise AuthenticationFailed("User not found.")
+
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed("Token expired.")
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed("Invalid token.")
+
+
+class UpdateUserView(APIView):
+    def put(self, request):
+        token = request.COOKIES.get("jwt")
+
+        if not token:
+            raise AuthenticationFailed("Unauthenticated.")
+
+        try:
+            payload = jwt.decode(token, "your_secret_key", algorithm="HS256")
+            user = User.objects.filter(id=payload["id"]).first()
+
+            if not user:
+                raise AuthenticationFailed("User not found.")
+
+            serializer = UserSerializer(instance=user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response(serializer.data)
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed("Unauthenticated.")
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed("Invalid token.")
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        response = Response()
+        response.delete_cookie("jwt")
+        response.data = {"message": "Goodbye"}
+        return response

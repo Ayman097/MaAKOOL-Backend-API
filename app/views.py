@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from .models import Product, Category
 from .serializers import ProductSerializer, CategorySerializer
@@ -16,7 +17,13 @@ def product_list(request):
     products = Product.objects.all()
     # print(products)
     filterset = ProductFilter(request.GET, queryset=products)
-    serializer = ProductSerializer(filterset.qs, many=True)
+
+    pageNum = 3
+    paginator = PageNumberPagination()
+    paginator.page_size = pageNum
+
+    queryset = paginator.paginate_queryset(filterset.qs, request)
+    serializer = ProductSerializer(queryset, many=True)
     print(serializer.data)
 
     return Response(serializer.data)
