@@ -23,12 +23,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderItemsSerializer(serializers.ModelSerializer):
-    order = OrderSerializer(read_only=True)
     product = ProductSerializer(read_only=True)
 
     class Meta:
         model = OrderItems
-        fields = ["product", "quantity", "order"]
+        fields = ["product", "quantity"]
 
 
 class DetailedOrderSerializer(serializers.ModelSerializer):

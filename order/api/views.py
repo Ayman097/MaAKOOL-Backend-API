@@ -5,9 +5,10 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from app.models import Product
 from order.models import Order, OrderItems
-from .serializers import OrderItemsSerializer, DetailedOrderSerializer
+from .serializers import OrderItemsSerializer, DetailedOrderSerializer, OrderSerializer
 from account.models import User
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 
 
 from rest_framework.exceptions import AuthenticationFailed
@@ -143,3 +144,28 @@ def submit_order(request):
                 status=status.HTTP_404_NOT_FOUND,
             )
     raise AuthenticationFailed("User not found.")
+
+
+@api_view()
+def userOrders(request, id):
+    try:
+        user = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    userOrders = (
+        Order.objects.filter(user=user, ordered=True)
+        .order_by("creating_date")
+        .distinct()
+    )
+
+    if userOrders.exists():
+        userOrderSerializer = DetailedOrderSerializer(userOrders, many=True)
+        return Response(
+            {"userOrders": userOrderSerializer.data}, status=status.HTTP_200_OK
+        )
+    else:
+        return Response(
+            {"message": "No ordered items found for this user"},
+            status=status.HTTP_204_NO_CONTENT,
+        )
