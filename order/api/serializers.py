@@ -12,7 +12,14 @@ class ProductSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ["total_price", "creating_date", "status", "ordered", "orderItems"]
+        fields = [
+            "user",
+            "total_price",
+            "creating_date",
+            "status",
+            "ordered",
+            "orderItems",
+        ]
 
 
 class OrderItemsSerializer(serializers.ModelSerializer):
@@ -29,4 +36,11 @@ class DetailedOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["total_price", "creating_date", "status", "ordered", "orderItems"]
+        fields = [
+            "user",
+            "total_price",
+            "creating_date",
+            "status",
+            "ordered",
+            "orderItems",
+        ]
