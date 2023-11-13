@@ -4,6 +4,7 @@ from account.models import User
 
 
 class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     creating_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
@@ -13,6 +14,8 @@ class Order(models.Model):
             ("In Progress", "In Progress"),
             ("Out for Delivery", "Out for Delivery"),
         ],
+        null=True,
+        blank=True,
     )
     ordered = models.BooleanField(default=False)
 

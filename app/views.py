@@ -18,7 +18,7 @@ def product_list(request):
     # print(products)
     filterset = ProductFilter(request.GET, queryset=products)
 
-    pageNum = 3
+    pageNum = 5
     paginator = PageNumberPagination()
     paginator.page_size = pageNum
 
