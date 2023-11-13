@@ -27,6 +27,8 @@ class LoginView(APIView):
 
         payload = {
             "id": user.id,
+            "email": user.email,
+            "username": user.username,
             "exp": datetime.datetime.utcnow()
             + datetime.timedelta(minutes=15),  # Shortened expiry time
             "iat": datetime.datetime.utcnow(),
@@ -35,9 +37,7 @@ class LoginView(APIView):
         token = jwt.encode(payload, "your_secret_key", algorithm="HS256")
 
         response = Response()
-        response.set_cookie(
-            key="jwt", value=token, httponly=True
-        )  # Setting JWT as an HTTP-only cookie
+        response.set_cookie(key="jwt", value=token, httponly=False)
 
         return response
 
