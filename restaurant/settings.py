@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
-    "account",
+    "accounts",
     "app",
     'corsheaders',
     "order",
@@ -191,7 +191,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
-AUTH_USER_MODEL = 'account.User'
+AUTH_USER_MODEL = 'accounts.User'
 APPEND_SLASH = False
 REST_FRAMEWORK = {"COERCE_DECIMAL_TO_STRING": False}
 

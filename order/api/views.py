@@ -6,7 +6,7 @@ from rest_framework import status
 from app.models import Product
 from order.models import Order, OrderItems
 from .serializers import OrderItemsSerializer, DetailedOrderSerializer, OrderSerializer
-from account.models import User
+from accounts.models import User
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
