@@ -6,12 +6,9 @@ import re
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="user.email")
-    username = serializers.CharField(source="user.username")
-
     class Meta:
         model = Profile
-        fields = ("email", "username", "address", "phone")
+        fields = ("address", "phone")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -81,9 +78,9 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False)
     token = serializers.SerializerMethodField()
+    address = serializers.CharField(required=False)
+    phone = serializers.CharField(required=False)
 
     class Meta:
         model = User
@@ -91,10 +88,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "email",
-            "password",
-            "confirm_password",
             "profile",
             "token",
+            "address",
+            "phone",
         )
         extra_kwargs = {
             "profile": {"read_only": True},
@@ -110,18 +107,21 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        if "password" in data and "confirm_password" in data:
-            if data["password"] != data["confirm_password"]:
-                raise serializers.ValidationError("Passwords do not match.")
+        # Validate other fields as needed
         return data
 
-    def update(self, instance, validated_data):  # to display on User Model
+    def update(self, instance, validated_data):
         instance.email = validated_data.get("email", instance.email)
         instance.username = validated_data.get("username", instance.username)
 
-        password = validated_data.get("password")
-        if password:
-            instance.set_password(password)
+        # Update the profile fields (address and phone)
+        profile_data = {
+            "address": validated_data.get("address", instance.profile.address),
+            "phone": validated_data.get("phone", instance.profile.phone),
+        }
+        instance.profile.address = profile_data["address"]
+        instance.profile.phone = profile_data["phone"]
+        instance.profile.save()
 
         instance.save()
 

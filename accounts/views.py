@@ -69,19 +69,10 @@ class UserLoginView(TokenObtainPairView):
 
 
 class UserProfileView(APIView):
-    # permission_classes = [IsAuthenticated]
-
     def get(self, request, user_id, format=None):
-        if request.user.id != user_id:
-            return Response(
-                {"error": "You don't have permission to view this profile"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         try:
             user = User.objects.get(id=user_id)
-            profile = user.profile
-            serializer = ProfileSerializer(profile)
+            serializer = UserSerializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response(
@@ -91,10 +82,15 @@ class UserProfileView(APIView):
 
 class UserProfileUpdateView(generics.UpdateAPIView):
     serializer_class = UserProfileUpdateSerializer
-    permission_classes = [IsAuthenticated]
+    queryset = User.objects.all()  # Add this line to set the queryset
 
     def get_object(self):
-        return self.request.user
+        id = self.kwargs["user_id"]
+        return self.get_queryset().get(id=id)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
 
 class LogoutView(APIView):
