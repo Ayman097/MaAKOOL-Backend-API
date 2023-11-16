@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, serializers
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -15,25 +15,26 @@ from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
 from .models import RevokedToken
 
 
-
-
-
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def create(self, request, *args, **kwargs):
+        print(request.data)
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            print(serializer.errors)  # Print validation errors
+            raise serializers.ValidationError(serializer.errors)
         user = serializer.save()
 
         refresh = RefreshToken.for_user(user)
         data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
         }
 
         return Response(data)
+
 
 class UserLoginView(TokenObtainPairView):
     serializer_class = UserLoginSerializer
@@ -44,20 +45,18 @@ class UserLoginView(TokenObtainPairView):
 
         response = super().post(request, *args, **kwargs)
         user = serializer.user
-        refresh = response.data['refresh']
-        access = response.data['access']
+        refresh = response.data["refresh"]
+        access = response.data["access"]
         user_data = {
-                        'email': user.email,
-                        'username': user.username,
-                        'address': user.profile.address,
-                        'phone': user.profile.phone,
-                        'id': user.id
-                    }
+            "email": user.email,
+            "username": user.username,
+            "address": user.profile.address,
+            "phone": user.profile.phone,
+            "id": user.id,
+        }
 
-        response.data.update({'user': user_data})
+        response.data.update({"user": user_data})
         return response
-
-
 
 
 class UserProfileUpdateView(generics.UpdateAPIView):
@@ -66,7 +65,6 @@ class UserProfileUpdateView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user
-
 
 
 class LogoutView(APIView):
@@ -85,7 +83,10 @@ class LogoutView(APIView):
                 access_token = OutstandingToken.objects.get(token=access_token)
                 RevokedToken.add(access_token)
 
-            return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Successfully logged out."}, status=status.HTTP_200_OK
+            )
         except OutstandingToken.DoesNotExist:
-            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(
+                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+            )
