@@ -15,7 +15,6 @@ class Address(models.Model):
     def __str__(self):
         return f"{self.street}, {self.city}, {self.state}"
 
-
 class Category(models.Model):
     name = models.CharField(max_length=50)
 
@@ -43,18 +42,5 @@ class Product(models.Model):
         return self.name
 
     def img_preview(self):
-        return mark_safe(
-            f'<img src = "{self.image.url}" width = "200" height = "200"/>'
-        )
+        return mark_safe(f'<img src = "{self.image.url}" width = "200" height = "200"/>')
 
-
-class User(models.Model):
-    username = models.CharField(max_length=255)
-    password = models.CharField(
-        max_length=255
-    )  # You should use a more secure way to store passwords, like hashing
-    email = models.EmailField()
-    address = models.OneToOneField(Address, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.username
