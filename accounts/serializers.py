@@ -2,11 +2,15 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
 
-
 class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email')
+    username = serializers.CharField(source='user.username')
+
     class Meta:
         model = Profile
-        fields = ('address', 'phone')
+        fields = ('email', 'username', 'address', 'phone')
+
+
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
@@ -42,6 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
             Profile.objects.create(user=user, **profile_data)
 
         return user
+
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -107,9 +112,25 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-
 class LogoutSerializer(serializers.Serializer):
     refresh_token = serializers.CharField(required=True)
 
     def validate(self, attrs):
         return attrs
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    class Meta:
+        fields = ['email']
+
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if not data.get('new_password'):
+            raise serializers.ValidationError("New password is required.")
+        return data
+
