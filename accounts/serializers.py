@@ -6,9 +6,12 @@ import re
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username")
+
     class Meta:
         model = Profile
-        fields = ("address", "phone")
+        fields = ("email", "username", "address", "phone")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -130,3 +133,19 @@ class LogoutSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    class Meta:
+        fields = ["email"]
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if not data.get("new_password"):
+            raise serializers.ValidationError("New password is required.")
+        return data
