@@ -1,0 +1,10 @@
+#!/bin/sh
+'''exec' "/media/ahmed/88B6C67FB6C66CEE/ITI_2023/Fullstack Web Dev Using Python/Graduation Project/2023/Resturant_iti_api/venv/bin/python3" "$0" "$@"
+' '''
+# -*- coding: utf-8 -*-
+import re
+import sys
+from setuptools.command.easy_install import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
