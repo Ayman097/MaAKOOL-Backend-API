@@ -1,9 +1,30 @@
 from django.db import models
 from django.utils.html import mark_safe
-from softdelete.models import SoftDeleteManager
 
 # Create your models here.
 from django.db import models
+
+
+class SoftDeleteManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
+class SoftDeleteModel(models.Model):
+    is_deleted = models.BooleanField(default=False)
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
+
+    def delete(self, *args, **kwargs):
+        self.is_deleted = True
+        self.save()
+
+    def restore(self):
+        self.is_deleted = False
+        self.save()
+
+    class Meta:
+        abstract = True
 
 
 class Address(models.Model):
@@ -17,23 +38,19 @@ class Address(models.Model):
         return f"{self.street}, {self.city}, {self.state}"
 
 
-class Category(models.Model):
+class Category(SoftDeleteModel, models.Model):
     name = models.CharField(max_length=50)
-    objects = SoftDeleteManager()
-    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
 
 
-class Product(models.Model):
+class Product(SoftDeleteModel, models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to="products/")
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    objects = SoftDeleteManager()
-    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
