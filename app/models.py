@@ -21,6 +21,15 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+class Offer(models.Model):
+    image = models.ImageField(upload_to="offers/")
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
+    def img_preview(self):
+        return mark_safe(
+            f'<img src = "{self.image.url}" width = "200" height = "200"/>'
+        )
 
 class Product(models.Model):
     name = models.CharField(max_length=255)

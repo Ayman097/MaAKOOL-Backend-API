@@ -16,4 +16,9 @@ urlpatterns = [
     path('category/new',  views.new_category, name='new_category'),
     path('category/edit/<int:id>',  views.update_category, name='update_category'),
     path('category/delete/<int:id>',  views.delete_category, name='delete_category'),
+
+    path('offer/',  views.get_offers, name='offer'),
+    path('offer/add',  views.add_offers, name='add-offer'),
+    path('offer/update/<int:id>',  views.update_offers, name='update-offer'),
+    path('offer/delete/<int:id>',  views.delete_offers, name='delete-offer'),
 ]
