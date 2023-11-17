@@ -2,6 +2,13 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
 
+
+class ProfileSerializerView(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ('address', 'phone')
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email')
     username = serializers.CharField(source='user.username')
@@ -11,9 +18,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ('email', 'username', 'address', 'phone')
 
 
-
 class UserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer()
+    profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
 
     class Meta:
@@ -123,7 +129,6 @@ class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
     class Meta:
         fields = ['email']
-
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
