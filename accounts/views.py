@@ -1,27 +1,29 @@
-from rest_framework import generics, serializers
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User
+from .models import User, RevokedToken
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
-from .serializers import UserSerializer
-from .serializers import UserLoginSerializer
-from .serializers import UserProfileUpdateSerializer
+from .serializers import (
+    UserSerializer,
+    UserLoginSerializer,
+    UserProfileUpdateSerializer,
+    LogoutSerializer,
+    ProfileSerializer,
+    PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
+)
 from rest_framework.views import APIView
 from rest_framework import status
-from .serializers import LogoutSerializer
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
-from .models import RevokedToken
-from .serializers import ProfileSerializer
-from .serializers import PasswordResetSerializer
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.http import HttpResponseBadRequest
-from .serializers import PasswordResetConfirmSerializer
+from django.utils.encoding import force_bytes
 
 
 class RegisterView(generics.CreateAPIView):
@@ -29,11 +31,8 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
     def create(self, request, *args, **kwargs):
-        print(request.data)
         serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            print(serializer.errors)  # Print validation errors
-            raise serializers.ValidationError(serializer.errors)
+        serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
         refresh = RefreshToken.for_user(user)
@@ -69,10 +68,19 @@ class UserLoginView(TokenObtainPairView):
 
 
 class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, user_id, format=None):
+        if request.user.id != user_id:
+            return Response(
+                {"error": "You don't have permission to view this profile"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         try:
             user = User.objects.get(id=user_id)
-            serializer = UserSerializer(user)
+            profile = user.profile
+            serializer = ProfileSerializer(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response(
@@ -82,15 +90,10 @@ class UserProfileView(APIView):
 
 class UserProfileUpdateView(generics.UpdateAPIView):
     serializer_class = UserProfileUpdateSerializer
-    queryset = User.objects.all()  # Add this line to set the queryset
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        id = self.kwargs["user_id"]
-        return self.get_queryset().get(id=id)
-
-    def partial_update(self, request, *args, **kwargs):
-        kwargs["partial"] = True
-        return self.update(request, *args, **kwargs)
+        return self.request.user
 
 
 class LogoutView(APIView):
@@ -129,8 +132,12 @@ class PasswordResetView(APIView):
             refresh = RefreshToken.for_user(user)
 
             current_site = get_current_site(request)
-            relative_link = reverse("password-reset-confirm")
-            abs_url = f"http://127.0.0.1:8000/{relative_link}?token={refresh}"
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            relative_link = reverse(
+                "password-reset-confirm", kwargs={"uidb64": uidb64, "token": token}
+            )
+            abs_url = f"http://127.0.0.1:8000/{relative_link}"
 
             send_mail(
                 "Password Reset",
@@ -156,18 +163,27 @@ class PasswordResetConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
 
         new_password = serializer.validated_data["new_password"]
-        uidb64 = self.kwargs["uidb64"]
-        token = self.kwargs["token"]
+        uidb64 = kwargs["uidb64"]
+        token = kwargs["token"]
 
         try:
-            uid = str(urlsafe_base64_decode(uidb64), "utf-8")
+            uid = urlsafe_base64_decode(uidb64).decode()
             user = User.objects.get(pk=uid)
 
             if default_token_generator.check_token(user, token):
                 user.set_password(new_password)
                 user.save()
-                return Response({"message": "Password reset successfully."}, status=200)
+                return Response(
+                    {"message": "Password reset successfully."},
+                    status=status.HTTP_200_OK,
+                )
             else:
-                return HttpResponseBadRequest("Invalid token")
+                return Response(
+                    {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+                )
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return HttpResponseBadRequest("Invalid user ID")
+            return Response(
+                {"error": "Invalid user ID"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

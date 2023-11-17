@@ -9,14 +9,12 @@ from .views import PasswordResetView, PasswordResetConfirmView
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", UserLoginView.as_view(), name="login"),
-    path(
-        "update/<user_id>", UserProfileUpdateView.as_view(), name="user-profile-update"
-    ),
+    path("update/", UserProfileUpdateView.as_view(), name="user-profile-update"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("profile/<user_id>", UserProfileView.as_view(), name="user-profile"),
+    path("profile/<int:user_id>/", UserProfileView.as_view(), name="user-profile"),
     path("reset-password/", PasswordResetView.as_view(), name="password-reset"),
     path(
-        "reset-password/confirm/",
+        "reset-password/confirm/<str:uidb64>/<str:token>/",
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
     ),

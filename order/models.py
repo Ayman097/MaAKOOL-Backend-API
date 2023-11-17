@@ -1,10 +1,10 @@
 from django.db import models
 from app.models import Product
 from accounts.models import User
-from softdelete.models import SoftDeletableModel
+from softdelete.models import SoftDeleteManager
 
 
-class Order(SoftDeletableModel):
+class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     creating_date = models.DateTimeField(auto_now_add=True)
@@ -19,9 +19,11 @@ class Order(SoftDeletableModel):
         blank=True,
     )
     ordered = models.BooleanField(default=False)
+    objects = SoftDeleteManager()
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
 
-class OrderItems(SoftDeletableModel):
+class OrderItems(models.Model):
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="orderItems"
     )
@@ -30,3 +32,6 @@ class OrderItems(SoftDeletableModel):
         on_delete=models.CASCADE,
     )
     quantity = models.PositiveIntegerField(default=1)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    objects = SoftDeleteManager()

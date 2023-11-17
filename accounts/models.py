@@ -23,7 +23,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     address = models.CharField(max_length=1000)
     phone = models.CharField(null=True, max_length=11)
-    # image = models.ImageField(null=True, blank=True, upload_to="profile/")
+    image = models.ImageField(null=True, blank=True, upload_to="user_image/")
 
 
 @receiver(post_save, sender=User)
