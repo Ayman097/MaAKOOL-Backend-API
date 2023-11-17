@@ -1,9 +1,10 @@
 from django.db import models
 from app.models import Product
 from accounts.models import User
+from softdelete.models import SoftDeletableModel
 
 
-class Order(models.Model):
+class Order(SoftDeletableModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     creating_date = models.DateTimeField(auto_now_add=True)
@@ -20,7 +21,7 @@ class Order(models.Model):
     ordered = models.BooleanField(default=False)
 
 
-class OrderItems(models.Model):
+class OrderItems(SoftDeletableModel):
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="orderItems"
     )
