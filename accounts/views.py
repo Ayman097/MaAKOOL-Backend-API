@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User, RevokedToken
+from .models import User, RevokedToken, Profile
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
@@ -13,6 +13,7 @@ from .serializers import (
     ProfileSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
+    ProfileImageSerializer
 )
 from rest_framework.views import APIView
 from rest_framework import status
@@ -24,6 +25,20 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.http import HttpResponseBadRequest
 from django.utils.encoding import force_bytes
+
+
+
+class ProfileImageUpdateView(generics.UpdateAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileImageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        serializer.save(user=instance.user)
 
 
 class RegisterView(generics.CreateAPIView):
