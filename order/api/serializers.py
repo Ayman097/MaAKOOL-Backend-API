@@ -44,3 +44,8 @@ class DetailedOrderSerializer(serializers.ModelSerializer):
             "ordered",
             "orderItems",
         ]
+
+    def update_order_status(self, instance, validated_data):
+        instance.status = validated_data.get("status", instance.status)
+        instance.save()
+        return instance
