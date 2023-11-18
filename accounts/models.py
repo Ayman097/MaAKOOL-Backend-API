@@ -18,6 +18,9 @@ class User(AbstractUser, SoftDeleteModel):
         except Profile.DoesNotExist:
             return None
 
+    def __str__(self):
+        return f"{self.username} (Staff: {self.is_staff})"
+
 
 class Profile(SoftDeleteModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")

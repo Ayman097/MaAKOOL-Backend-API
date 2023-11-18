@@ -53,6 +53,38 @@ class UserLoginView(TokenObtainPairView):
 
         response = super().post(request, *args, **kwargs)
         user = serializer.user
+
+        refresh = response.data["refresh"]
+        access = response.data["access"]
+        user_data = {
+            "email": user.email,
+            "username": user.username,
+            "address": user.profile.address,
+            "phone": user.profile.phone,
+            "id": user.id,
+        }
+
+        response.data.update({"user": user_data})
+        return response
+
+
+class StaffLoginView(TokenObtainPairView):
+    serializer_class = UserLoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.user
+
+        if not user.is_staff:
+            return Response(
+                {"detail": "You do not have permission to log in."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        response = super().post(request, *args, **kwargs)
+
         refresh = response.data["refresh"]
         access = response.data["access"]
         user_data = {
