@@ -184,7 +184,7 @@ class PasswordResetView(APIView):
             relative_link = reverse(
                 "password-reset-confirm", kwargs={"uidb64": uidb64, "token": token}
             )
-            abs_url = f"http://127.0.0.1:8000/{relative_link}"
+            abs_url = f"http://127.0.0.1:8000{relative_link}"
 
             send_mail(
                 "Password Reset",
