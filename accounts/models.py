@@ -2,10 +2,10 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
-from rest_framework_simplejwt.tokens import RefreshToken
+from app.models import SoftDeleteModel
 
 
-class User(AbstractUser):
+class User(AbstractUser, SoftDeleteModel):
     username = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
 
@@ -18,11 +18,15 @@ class User(AbstractUser):
         except Profile.DoesNotExist:
             return None
 
+    def __str__(self):
+        return f"{self.username} (Staff: {self.is_staff})"
 
-class Profile(models.Model):
+
+class Profile(SoftDeleteModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     address = models.CharField(max_length=1000)
     phone = models.CharField(null=True, max_length=11)
+    image = models.ImageField(null=True, blank=True, upload_to="user_image/")
 
 
 @receiver(post_save, sender=User)

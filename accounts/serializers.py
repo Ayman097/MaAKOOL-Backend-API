@@ -1,18 +1,31 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
-from rest_framework.validators import UniqueValidator
-import re
 
 
-class ProfileSerializer(serializers.ModelSerializer):
+class ProfileImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['image']
+
+
+class ProfileSerializerView(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ("address", "phone")
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username")
+
+    class Meta:
+        model = Profile
+        fields = ("email", "username", "address", "phone", "image")
+
+
 class UserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer()
+    profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
 
     class Meta:
@@ -20,14 +33,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ("id", "username", "email", "password", "password2", "profile")
         extra_kwargs = {
             "password": {"write_only": True},
-            "email": {"validators": [UniqueValidator(queryset=User.objects.all())]},
-            "username": {"validators": [UniqueValidator(queryset=User.objects.all())]},
         }
 
     def validate(self, data):
         if data["password"] != data["password2"]:
-            raise serializers.ValidationError({"password2": "Passwords do not match."})
-
+            raise serializers.ValidationError("Passwords do not match.")
         return data
 
     def create(self, validated_data):
@@ -78,9 +88,10 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    confirm_password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False)
+    profile = ProfileSerializer(required=False)  # Include ProfileSerializer here
     token = serializers.SerializerMethodField()
-    address = serializers.CharField(required=False)
-    phone = serializers.CharField(required=False)
 
     class Meta:
         model = User
@@ -88,10 +99,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "email",
+            "password",
+            "confirm_password",
             "profile",
             "token",
-            "address",
-            "phone",
         )
         extra_kwargs = {
             "profile": {"read_only": True},
@@ -107,23 +118,33 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        # Validate other fields as needed
+        if "password" in data and "confirm_password" in data:
+            if data["password"] != data["confirm_password"]:
+                raise serializers.ValidationError("Passwords do not match.")
         return data
 
     def update(self, instance, validated_data):
         instance.email = validated_data.get("email", instance.email)
         instance.username = validated_data.get("username", instance.username)
 
-        # Update the profile fields (address and phone)
-        profile_data = {
-            "address": validated_data.get("address", instance.profile.address),
-            "phone": validated_data.get("phone", instance.profile.phone),
-        }
-        instance.profile.address = profile_data["address"]
-        instance.profile.phone = profile_data["phone"]
-        instance.profile.save()
+        password = validated_data.get("password")
+        if password:
+            instance.set_password(password)
 
         instance.save()
+
+        # Update profile data if it exists
+        profile_data = validated_data.get("profile", {})
+        profile_instance = instance.profile
+
+        if profile_instance:
+            profile_instance.address = profile_data.get(
+                "address", profile_instance.address
+            )
+            profile_instance.phone = profile_data.get("phone", profile_instance.phone)
+            profile_instance.save()
+        elif profile_data:
+            Profile.objects.create(user=instance, **profile_data)
 
         return instance
 

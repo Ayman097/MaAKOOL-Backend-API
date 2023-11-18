@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/home/ahmed/iti/graduation project/Resturant_iti_api/venv/bin/python" "$0" "$@"
+'''exec' "/home/ahmed/iti/api projects/e-commerce/venv/bin/python" "$0" "$@"
 ' '''
 # -*- coding: utf-8 -*-
 import re
