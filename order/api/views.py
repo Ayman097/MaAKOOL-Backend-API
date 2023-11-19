@@ -10,14 +10,29 @@ from accounts.models import User
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 
 
 from rest_framework.exceptions import AuthenticationFailed
 
 
+class OrderPagination(PageNumberPagination):
+    page_size = 5  # Number of items to include on each page
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = DetailedOrderSerializer
+    pagination_class = OrderPagination
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = DetailedOrderSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.update_order_status(instance, serializer.validated_data)
+        return Response(serializer.data)
 
 
 class OrderItemsViewSet(viewsets.ModelViewSet):
