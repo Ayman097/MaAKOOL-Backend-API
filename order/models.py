@@ -14,6 +14,7 @@ class Order(SoftDeleteModel, models.Model):
             ("Pending", "Pending"),
             ("In Progress", "In Progress"),
             ("Out for Delivery", "Out for Delivery"),
+            ("Delivered", "Delivered"),
         ],
         null=True,
         blank=True,

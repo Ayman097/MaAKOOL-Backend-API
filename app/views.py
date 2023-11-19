@@ -29,7 +29,6 @@ def product_list(request):
     return Response(serializer.data)
 
 
-
 @api_view()
 def product_detail(request, id):
     product = get_object_or_404(Product, pk=id)
@@ -154,44 +153,45 @@ def update_category(request, id):
 def delete_category(request, id):
     category = get_object_or_404(Category, pk=id)
     category.delete()
-    
-    
-    return Response({"category": 'Deleted Successfully'})
+
+    return Response({"category": "Deleted Successfully"})
 
 
 # Offers Handling
 
+
 @api_view()
 def get_offers(request):
-    offers = Offer.objects.all().order_by('-id')[:3]
+    offers = Offer.objects.all()
     serializer = OfferSerializer(offers, many=True)
     return Response(serializer.data)
 
+
 # Add Offer
-@api_view(['POST'])
+@api_view(["POST"])
 def add_offers(request):
     data = request.data
-    offer = Offer.objects.create(image=data['image'])
+    offer = Offer.objects.create(image=data["image"])
     offer.save()
     serializer = OfferSerializer(offer)
-    return Response({"offer": serializer.data},status=status.HTTP_201_CREATED)
+    return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
+
 
 # Update Offer
-@api_view(['PUT'])
+@api_view(["PUT"])
 def update_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
-    
-    offer.image = request.data['image']
+
+    offer.image = request.data["image"]
     offer.save()
-    
+
     serializer = OfferSerializer(offer)
     return Response(serializer.data)
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 def delete_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
     offer.delete()
-    
-    
-    return Response({"Offer": 'Deleted Successfully'})
+
+    return Response({"Offer": "Deleted Successfully"})
