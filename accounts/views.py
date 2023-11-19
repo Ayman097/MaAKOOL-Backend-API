@@ -181,10 +181,10 @@ class PasswordResetView(APIView):
             current_site = get_current_site(request)
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
-            relative_link = reverse(
-                "password-reset-confirm", kwargs={"uidb64": uidb64, "token": token}
-            )
-            abs_url = f"http://127.0.0.1:8000/{relative_link}"
+
+            relative_link = reverse('password-reset-confirm', kwargs={"uidb64": uidb64, "token": token})
+            abs_url = f"http://localhost:5173/ForgetPasswordConfirm/{uidb64}/{token}/"
+
 
             send_mail(
                 "Password Reset",
