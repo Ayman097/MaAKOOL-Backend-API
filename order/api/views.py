@@ -17,9 +17,8 @@ from rest_framework.exceptions import AuthenticationFailed
 
 
 class OrderPagination(PageNumberPagination):
-    page_size = 5  # Number of items to include on each page
+    page_size = 2  # Number of items to include on each page
     page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 class OrderViewSet(viewsets.ModelViewSet):
