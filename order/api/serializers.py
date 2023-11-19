@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from accounts.serializers import UserSerializer
 from ..models import Order, OrderItems
 from app.models import Product
 
@@ -32,6 +34,7 @@ class OrderItemsSerializer(serializers.ModelSerializer):
 
 class DetailedOrderSerializer(serializers.ModelSerializer):
     orderItems = OrderItemsSerializer(many=True, read_only=True)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Order

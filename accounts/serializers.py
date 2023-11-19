@@ -3,6 +3,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
 
 
+class ProfileImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['image']
+
+
 class ProfileSerializerView(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -15,7 +21,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ("email", "username", "address", "phone")
+        fields = ("email", "username", "address", "phone", "image")
 
 
 class UserSerializer(serializers.ModelSerializer):

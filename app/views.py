@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
-from .models import Product, Category
-from .serializers import ProductSerializer, CategorySerializer
+from .models import Product, Category, Offer
+from .serializers import ProductSerializer, CategorySerializer, OfferSerializer
 from decimal import Decimal
 from .filters import ProductFilter
 
@@ -18,7 +18,7 @@ def product_list(request):
     # print(products)
     filterset = ProductFilter(request.GET, queryset=products)
 
-    pageNum = 20
+    pageNum = 3
     paginator = PageNumberPagination()
     paginator.page_size = pageNum
 
@@ -155,3 +155,43 @@ def delete_category(request, id):
     category.delete()
 
     return Response({"category": "Deleted Successfully"})
+
+
+# Offers Handling
+
+
+@api_view()
+def get_offers(request):
+    offers = Offer.objects.all()
+    serializer = OfferSerializer(offers, many=True)
+    return Response(serializer.data)
+
+
+# Add Offer
+@api_view(["POST"])
+def add_offers(request):
+    data = request.data
+    offer = Offer.objects.create(image=data["image"])
+    offer.save()
+    serializer = OfferSerializer(offer)
+    return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
+
+
+# Update Offer
+@api_view(["PUT"])
+def update_offers(request, id):
+    offer = get_object_or_404(Offer, id=id)
+
+    offer.image = request.data["image"]
+    offer.save()
+
+    serializer = OfferSerializer(offer)
+    return Response(serializer.data)
+
+
+@api_view(["DELETE"])
+def delete_offers(request, id):
+    offer = get_object_or_404(Offer, id=id)
+    offer.delete()
+
+    return Response({"Offer": "Deleted Successfully"})
