@@ -34,6 +34,13 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = DetailedOrderSerializer
     pagination_class = OrderPagination
 
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = DetailedOrderSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.update_order_status(instance, serializer.validated_data)
+        return Response(serializer.data)
+
 
 class OrderItemsViewSet(viewsets.ModelViewSet):
     queryset = OrderItems.objects.all()
