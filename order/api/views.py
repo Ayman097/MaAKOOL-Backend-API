@@ -1,5 +1,5 @@
 # views.py
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
@@ -17,7 +17,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 
 class OrderPagination(PageNumberPagination):
-    page_size = 5  # Number of items to include on each page
+    page_size = 10  # Number of items to include on each page
     page_size_query_param = "page_size"
 
     def get_paginated_response(self, data):
@@ -33,6 +33,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = DetailedOrderSerializer
     pagination_class = OrderPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["status"]
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
