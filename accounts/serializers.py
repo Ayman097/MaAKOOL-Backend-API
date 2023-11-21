@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers, validators
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
 
@@ -6,7 +6,7 @@ from .models import User, Profile
 class ProfileImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['image']
+        fields = ["image"]
 
 
 class ProfileSerializerView(serializers.ModelSerializer):
@@ -170,3 +170,17 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if not data.get("new_password"):
             raise serializers.ValidationError("New password is required.")
         return data
+
+
+class ContactUsSerializer(serializers.Serializer):
+    name = serializers.CharField(required=True, max_length=50)
+    email = serializers.EmailField()
+    phone = serializers.CharField(required=True, max_length=11)
+    feedback = serializers.CharField(required=True, max_length=200)
+
+    def validate_phone(self, value):
+        if len(value) != 11:
+            raise serializers.ValidationError(
+                "Phone number must be exactly 11 characters."
+            )
+        return value

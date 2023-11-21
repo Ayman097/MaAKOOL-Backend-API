@@ -6,6 +6,7 @@ from .models import User, RevokedToken, Profile
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
+    ContactUsSerializer,
     UserSerializer,
     UserLoginSerializer,
     UserProfileUpdateSerializer,
@@ -13,7 +14,7 @@ from .serializers import (
     ProfileSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
-    ProfileImageSerializer
+    ProfileImageSerializer,
 )
 from rest_framework.views import APIView
 from rest_framework import status
@@ -25,7 +26,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.http import HttpResponseBadRequest
 from django.utils.encoding import force_bytes
-
 
 
 class ProfileImageUpdateView(generics.UpdateAPIView):
@@ -182,9 +182,10 @@ class PasswordResetView(APIView):
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
 
-            relative_link = reverse('password-reset-confirm', kwargs={"uidb64": uidb64, "token": token})
+            relative_link = reverse(
+                "password-reset-confirm", kwargs={"uidb64": uidb64, "token": token}
+            )
             abs_url = f"http://localhost:5173/ForgetPasswordConfirm/{uidb64}/{token}/"
-
 
             send_mail(
                 "Password Reset",
@@ -234,3 +235,25 @@ class PasswordResetConfirmView(APIView):
             )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ContactUsView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ContactUsSerializer(data=request.data)
+        if serializer.is_valid():
+            subject = "Contact Us Form Submission"
+            message = f"""
+            Name: {serializer.validated_data["name"]}
+            Email: {serializer.validated_data["email"]}
+            Phone: {serializer.validated_data["phone"]}
+            
+            Feedback:
+            {serializer.validated_data["feedback"]}
+            """
+            from_email = "a7med74yaso@gmail.com"
+            recipient_list = ["a7med74yaso@gmail.com", "imamahdi22@gmail.com"]
+
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
