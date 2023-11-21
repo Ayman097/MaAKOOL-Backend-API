@@ -17,7 +17,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 
 class OrderPagination(PageNumberPagination):
-    page_size = 10  # Number of items to include on each page
+    page_size = 20  # Number of items to include on each page
     page_size_query_param = "page_size"
 
     def get_paginated_response(self, data):
