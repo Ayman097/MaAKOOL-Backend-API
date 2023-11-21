@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "app",
     "order",
+    "payment",
 ]
 
 MIDDLEWARE = [
@@ -157,11 +158,17 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_TLS = True
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
-# EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_HOST_USER = "a7med74yaso@gmail.com"
+EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
+
+
 
 MEDIA_URL = "/products/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-EMAIL_HOST_USER = "a7med74yaso@gmail.com"
-EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
+
+
+
+
+STRIPE_SECRET_KEY = 'sk_test_51OEGdkJ9JycUN4N0Pu6zsv5PsXm3FiU7q3HTTgfi43IizGXrnklJuj28ME8bdurEBro65yOTj2NfL7tjTVWPUyWR00hzgcUUex'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51OEGdkJ9JycUN4N05wyqeoxYSLT0KdjvjHNivoba6lqypgkpvYDXKfeBbtrSPKCJqSLYEzM8Yp5Iw575FcUO3YoY00L9p0le2C'

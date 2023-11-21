@@ -25,6 +25,7 @@ urlpatterns = [
     path("resturant/", include("app.urls")),
     path("api/accounts/", include("accounts.urls")),
     path("orders/", include("order.urls")),
+    path("api/payment/", include("payment.urls")),
     path("softdelete/", include("softdelete.urls")),
 ]
 if settings.DEBUG:
