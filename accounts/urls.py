@@ -16,6 +16,11 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
     ),
-    path('profile/image/update/', ProfileImageUpdateView.as_view(), name='profile-image-update'),
+    path(
+        "profile/image/update/",
+        ProfileImageUpdateView.as_view(),
+        name="profile-image-update",
+    ),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("contact_us/", ContactUsView.as_view(), name="contact_us"),
 ]
