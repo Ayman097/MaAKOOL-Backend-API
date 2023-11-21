@@ -34,7 +34,7 @@ class Category(SoftDeleteModel, models.Model):
         return self.name
 
 
-class Offer(models.Model):
+class Offer(SoftDeleteModel, models.Model):
     image = models.ImageField(upload_to="offers/")
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)

@@ -15,18 +15,16 @@ from .filters import ProductFilter
 @api_view()
 def product_list(request):
     products = Product.objects.all()
-    # print(products)
     filterset = ProductFilter(request.GET, queryset=products)
 
-    pageNum = 3
+    pageNum = 12
     paginator = PageNumberPagination()
     paginator.page_size = pageNum
 
     queryset = paginator.paginate_queryset(filterset.qs, request)
     serializer = ProductSerializer(queryset, many=True)
-    print(serializer.data)
 
-    return Response(serializer.data)
+    return paginator.get_paginated_response(serializer.data)
 
 
 @api_view()
