@@ -27,22 +27,12 @@ class SoftDeleteModel(models.Model):
         abstract = True
 
 
-class Address(models.Model):
-    street = models.CharField(max_length=255)
-    city = models.CharField(max_length=255)
-    state = models.CharField(max_length=255)
-    country = models.CharField(max_length=255)
-    zip_code = models.CharField(max_length=10)
-
-    def __str__(self):
-        return f"{self.street}, {self.city}, {self.state}"
-
-
 class Category(SoftDeleteModel, models.Model):
     name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
+
 
 class Offer(models.Model):
     image = models.ImageField(upload_to="offers/")
@@ -53,6 +43,7 @@ class Offer(models.Model):
         return mark_safe(
             f'<img src = "{self.image.url}" width = "200" height = "200"/>'
         )
+
 
 class Product(SoftDeleteModel, models.Model):
     name = models.CharField(max_length=255)

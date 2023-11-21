@@ -21,6 +21,9 @@ class Order(SoftDeleteModel, models.Model):
     )
     ordered = models.BooleanField(default=False)
 
+    def get_queryset(self, request):
+        return self.model.all_objects.get_queryset()
+
 
 class OrderItems(SoftDeleteModel, models.Model):
     order = models.ForeignKey(
@@ -31,3 +34,6 @@ class OrderItems(SoftDeleteModel, models.Model):
         on_delete=models.CASCADE,
     )
     quantity = models.PositiveIntegerField(default=1)
+
+    def get_queryset(self, request):
+        return self.model.all_objects.get_queryset()

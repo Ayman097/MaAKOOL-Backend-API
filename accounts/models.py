@@ -21,12 +21,18 @@ class User(AbstractUser, SoftDeleteModel):
     def __str__(self):
         return f"{self.username} (Staff: {self.is_staff})"
 
+    def get_queryset(self, request):
+        return self.model.all_objects.get_queryset()
+
 
 class Profile(SoftDeleteModel, models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     address = models.CharField(max_length=1000)
     phone = models.CharField(null=True, max_length=11)
     image = models.ImageField(null=True, blank=True, upload_to="user_image/")
+
+    def get_queryset(self, request):
+        return self.model.all_objects.get_queryset()
 
 
 @receiver(post_save, sender=User)
