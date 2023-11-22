@@ -157,11 +157,17 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_TLS = True
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
-# EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_HOST_USER = "a7med74yaso@gmail.com"
+EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
+
+
 
 MEDIA_URL = "/products/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-EMAIL_HOST_USER = "a7med74yaso@gmail.com"
-EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
+
+
+
+TWILIO_ACCOUNT_SID = 'AC77568769b6637e352e513985117fec39'
+TWILIO_AUTH_TOKEN = 'baa5d7dac4263a1210f683c44218589d'
+TWILIO_PHONE_NUMBER = '+14069600225'

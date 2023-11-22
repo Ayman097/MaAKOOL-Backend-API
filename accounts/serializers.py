@@ -24,13 +24,54 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ("email", "username", "address", "phone", "image")
 
 
+# class UserSerializer(serializers.ModelSerializer):
+#     profile = ProfileSerializerView()
+#     password2 = serializers.CharField(write_only=True)
+
+#     verification_code = serializers.CharField(write_only=True)
+
+
+#     class Meta:
+#         model = User
+#         fields = ("id", "username", "email", "password", "password2", "profile", "verification_code")
+#         extra_kwargs = {
+#             "password": {"write_only": True},
+#         }
+
+#     def validate(self, data):
+#         if data["password"] != data["password2"]:
+#             raise serializers.ValidationError("Passwords do not match.")
+#         return data
+
+#     def create(self, validated_data):
+#         validated_data.pop("password2")
+
+#         profile_data = validated_data.pop("profile")
+
+#         user = User.objects.create_user(**validated_data)
+
+#         existing_profile = user.profile
+
+#         if existing_profile:
+#             existing_profile.address = profile_data.get(
+#                 "address", existing_profile.address
+#             )
+#             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
+#             existing_profile.save()
+#         else:
+#             Profile.objects.create(user=user, **profile_data)
+
+#         return user
+
+
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
+    verification_code = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "password2", "profile")
+        fields = ("id", "username", "email", "password", "password2", "profile", "verification_code")
         extra_kwargs = {
             "password": {"write_only": True},
         }
@@ -43,6 +84,14 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("password2")
 
+        # Ensure the verification code matches what was sent
+        provided_verification_code = validated_data.pop("verification_code")
+        phone = validated_data.get("profile", {}).get("phone")
+        stored_verification_code = get_stored_verification_code_for_phone(phone)  # Replace with your logic to retrieve stored verification code
+
+        if provided_verification_code != stored_verification_code:
+            raise ValidationError("Invalid verification code. Please provide the correct code.")
+
         profile_data = validated_data.pop("profile")
 
         user = User.objects.create_user(**validated_data)
@@ -50,15 +99,14 @@ class UserSerializer(serializers.ModelSerializer):
         existing_profile = user.profile
 
         if existing_profile:
-            existing_profile.address = profile_data.get(
-                "address", existing_profile.address
-            )
+            existing_profile.address = profile_data.get("address", existing_profile.address)
             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
             existing_profile.save()
         else:
             Profile.objects.create(user=user, **profile_data)
 
         return user
+
 
 
 class UserLoginSerializer(serializers.Serializer):

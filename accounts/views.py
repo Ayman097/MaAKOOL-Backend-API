@@ -41,6 +41,31 @@ class ProfileImageUpdateView(generics.UpdateAPIView):
         serializer.save(user=instance.user)
 
 
+# class RegisterView(generics.CreateAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
+
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         # verify the account by number
+#         phone = serializer.validated_data.get("profile", {}).get("phone")
+#         verification_code = serializer.validated_data.get("verification_code")
+#         verification_code = get_random_string(length=6, allowed_chars='0123456789')
+
+
+#         user = serializer.save()
+
+#         refresh = RefreshToken.for_user(user)
+#         data = {
+#             "refresh": str(refresh),
+#             "access": str(refresh.access_token),
+#         }
+
+#         return Response(data)
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -48,6 +73,26 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data.get("profile", {}).get("phone")
+        verification_code = serializer.validated_data.get("verification_code")
+
+
+        def get_stored_verification_code_for_phone(phone_number):
+            try:
+                phone_verification = PhoneVerificationCode.objects.get(phone_number=phone_number)
+                return phone_verification.verification_code
+            except PhoneVerificationCode.DoesNotExist:
+                return None
+
+        # Check if the phone number and verification code are valid
+        # This might involve sending the code and verifying it
+
+        # Dummy code to simulate verification
+        stored_verification_code = get_stored_verification_code_for_phone(phone)
+        if verification_code != stored_verification_code:
+            raise ValidationError("Invalid verification code. Please provide the correct code.")
+
         user = serializer.save()
 
         refresh = RefreshToken.for_user(user)
@@ -57,6 +102,7 @@ class RegisterView(generics.CreateAPIView):
         }
 
         return Response(data)
+
 
 
 class UserLoginView(TokenObtainPairView):
@@ -246,7 +292,7 @@ class ContactUsView(APIView):
             Name: {serializer.validated_data["name"]}
             Email: {serializer.validated_data["email"]}
             Phone: {serializer.validated_data["phone"]}
-            
+
             Feedback:
             {serializer.validated_data["feedback"]}
             """
