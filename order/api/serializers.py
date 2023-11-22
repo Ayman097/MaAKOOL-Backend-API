@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from accounts.serializers import UserSerializer
 from ..models import Order, OrderItems
 from app.models import Product
 
@@ -27,15 +29,17 @@ class OrderItemsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItems
-        fields = ["product", "quantity"]
+        fields = ["id", "product", "quantity"]
 
 
 class DetailedOrderSerializer(serializers.ModelSerializer):
     orderItems = OrderItemsSerializer(many=True, read_only=True)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Order
         fields = [
+            "id",
             "user",
             "total_price",
             "creating_date",
@@ -43,3 +47,8 @@ class DetailedOrderSerializer(serializers.ModelSerializer):
             "ordered",
             "orderItems",
         ]
+
+    def update_order_status(self, instance, validated_data):
+        instance.status = validated_data.get("status", instance.status)
+        instance.save()
+        return instance
