@@ -202,11 +202,7 @@ def userOrders(request, id):
         )
 
 
-# myapp/views.py
-
 stripe.api_key = "sk_test_51OCud2FDejSiAyCJUmWs68SyHkOowWlNeEsLalIe68YyofMjj0ZGVus9fp6W70f714Cme4ccTZODayIKKjuUTAm3004u6PetAI"
-
-# Set up logging
 logger = logging.getLogger(__name__)
 
 
@@ -246,6 +242,5 @@ def create_checkout_session(request):
         )
 
     except Exception as e:
-        # Log the error for debugging purposes
         logger.exception("Error creating Checkout Session:")
         return JsonResponse({"error": str(e)}, status=500)
