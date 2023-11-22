@@ -177,6 +177,9 @@ def submit_order(request):
     raise AuthenticationFailed("User not found.")
 
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+
 @api_view()
 def userOrders(request, id):
     try:
@@ -184,22 +187,40 @@ def userOrders(request, id):
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    sortOrder = request.query_params.get("sortOrder", "desc")
+    page = request.query_params.get("page", 1)
+
     userOrders = (
         Order.objects.filter(user=user, ordered=True)
-        .order_by("creating_date")
+        .order_by(f"-creating_date" if sortOrder == "desc" else "creating_date")
         .distinct()
     )
 
-    if userOrders.exists():
-        userOrderSerializer = DetailedOrderSerializer(userOrders, many=True)
-        return Response(
-            {"userOrders": userOrderSerializer.data}, status=status.HTTP_200_OK
-        )
+    paginator = Paginator(userOrders, 3)
+    try:
+        userOrders_page = paginator.page(page)
+    except PageNotAnInteger:
+        userOrders_page = paginator.page(1)
+    except EmptyPage:
+        userOrders_page = paginator.page(paginator.num_pages)
+
+    if userOrders_page.has_other_pages():
+        next_page = userOrders_page.next_page_number()
+        prev_page = userOrders_page.previous_page_number()
     else:
-        return Response(
-            {"message": "No ordered items found for this user"},
-            status=status.HTTP_204_NO_CONTENT,
-        )
+        next_page = None
+        prev_page = None
+
+    userOrderSerializer = DetailedOrderSerializer(userOrders_page, many=True)
+
+    return Response(
+        {
+            "userOrders": userOrderSerializer.data,
+            "next_page": next_page,
+            "prev_page": prev_page,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 stripe.api_key = "sk_test_51OCud2FDejSiAyCJUmWs68SyHkOowWlNeEsLalIe68YyofMjj0ZGVus9fp6W70f714Cme4ccTZODayIKKjuUTAm3004u6PetAI"
