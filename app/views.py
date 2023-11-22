@@ -169,7 +169,10 @@ def get_offers(request):
 @api_view(["POST"])
 def add_offers(request):
     data = request.data
-    offer = Offer.objects.create(image=data["image"])
+    # offer = Offer.objects.create(image=data["image"])
+    offer = Offer.objects.create(image=data['image'],
+                                 start_date=data['start_date'],
+                                 end_date=data['end_date'])
     offer.save()
     serializer = OfferSerializer(offer)
     return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
@@ -191,5 +194,4 @@ def update_offers(request, id):
 def delete_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
     offer.delete()
-
     return Response({"Offer": "Deleted Successfully"})
