@@ -12,6 +12,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
+from django.http import JsonResponse, HttpRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import stripe
+import json
+import logging
 
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -194,3 +200,52 @@ def userOrders(request, id):
             {"message": "No ordered items found for this user"},
             status=status.HTTP_204_NO_CONTENT,
         )
+
+
+# myapp/views.py
+
+stripe.api_key = "sk_test_51OCud2FDejSiAyCJUmWs68SyHkOowWlNeEsLalIe68YyofMjj0ZGVus9fp6W70f714Cme4ccTZODayIKKjuUTAm3004u6PetAI"
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+
+@csrf_exempt
+@require_POST
+def create_checkout_session(request):
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+
+        custom_amount = float(data.get("amount"))
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "USD",
+                        "product_data": {
+                            "name": "Total",
+                            "images": [
+                                "https://assets.theedgemarkets.com/digital-trade-ent-tem1305_20200212155358_theedgemarkets.jpg?null"
+                            ],
+                        },
+                        "unit_amount": int(custom_amount * 100),
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="payment",
+            success_url="http://localhost:5173/cart/success",
+            cancel_url="http://localhost:5173/cart/fail",
+        )
+
+        session_id = session.id
+        return JsonResponse(
+            {"client_secret": session.client_secret, "sessionId": session_id}
+        )
+
+    except Exception as e:
+        # Log the error for debugging purposes
+        logger.exception("Error creating Checkout Session:")
+        return JsonResponse({"error": str(e)}, status=500)

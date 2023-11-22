@@ -1,6 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .api.views import OrderViewSet, OrderItemsViewSet, submit_order, userOrders
+from .api.views import (
+    OrderViewSet,
+    OrderItemsViewSet,
+    create_checkout_session,
+    submit_order,
+    userOrders,
+)
 
 router = DefaultRouter()
 router.register(r"orders", OrderViewSet)
@@ -25,4 +31,9 @@ urlpatterns = [
     ),
     path("submit_order", submit_order, name="submit_order"),
     path("userOrders/<int:id>", userOrders, name="userOrders"),
+    path(
+        "stripe_payment",
+        create_checkout_session,
+        name="stripe_payment",
+    ),
 ]
