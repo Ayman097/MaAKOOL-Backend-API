@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -19,15 +19,14 @@ from .serializers import (
 )
 from django.conf import settings
 from rest_framework.views import APIView
-from rest_framework import status
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.http import HttpResponseBadRequest
 from django.utils.encoding import force_bytes
+import secrets
 
 
 class ProfileImageUpdateView(generics.UpdateAPIView):
@@ -42,28 +41,6 @@ class ProfileImageUpdateView(generics.UpdateAPIView):
         instance = self.get_object()
         serializer.save(user=instance.user)
 
-#####################################################
-# class RegisterView(generics.CreateAPIView):
-#     queryset = User.objects.all()
-#     serializer_class = UserSerializer
-
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-
-#         user = serializer.save()
-
-#         refresh = RefreshToken.for_user(user)
-#         data = {
-#             "refresh": str(refresh),
-#             "access": str(refresh.access_token),
-#         }
-
-#         return Response(data)
-#################################################
-from django.core.mail import send_mail
-from django.conf import settings
-import secrets
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -72,17 +49,10 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
-
-        # Generate verification code
-        verification_code = secrets.token_urlsafe(16)  # Generate a random code
-
-        # Save verification code to the user's profile
+        verification_code = secrets.token_urlsafe(16)
         user.profile.verification_code = verification_code
         user.profile.save()
-
-        # Send email with verification code
         send_mail(
             'Verification Code',
             f'Your verification code is: {verification_code}',
@@ -93,8 +63,6 @@ class RegisterView(generics.CreateAPIView):
 
         return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
 
-from rest_framework import generics, status
-from rest_framework.response import Response
 
 class EmailVerificationView(generics.GenericAPIView):
     serializer_class = EmailVerificationSerializer
@@ -116,12 +84,6 @@ class EmailVerificationView(generics.GenericAPIView):
             "access": str(refresh.access_token),
         }
         return Response(data, status=status.HTTP_200_OK)
-
-
-
-
-#################################################
-
 
 
 class UserLoginView(TokenObtainPairView):
@@ -153,7 +115,6 @@ class UserLoginView(TokenObtainPairView):
 
         response.data.update({"user": user_data})
         return response
-
 
 
 class StaffLoginView(TokenObtainPairView):

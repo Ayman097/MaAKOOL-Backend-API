@@ -1,10 +1,6 @@
 from rest_framework import serializers, validators
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
-# from .utils import send_verification_email
-# from django.utils.crypto import get_random_string
-
-
 
 
 class ProfileImageSerializer(serializers.ModelSerializer):
@@ -68,6 +64,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         return user
 
+
 class EmailVerificationSerializer(serializers.Serializer):
     verification_code = serializers.CharField()
     email = serializers.EmailField()
@@ -87,7 +84,6 @@ class EmailVerificationSerializer(serializers.Serializer):
             raise serializers.ValidationError("User not found")
 
         return data
-
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -115,7 +111,6 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Both email and password are required.")
 
         return data
-
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
