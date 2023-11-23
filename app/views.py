@@ -54,14 +54,47 @@ def category_product_list(request, category_id):
 
 
 # For Admin Dashboard
-# Create Product
+
+# # Create Product
+# @api_view(["POST"])
+# # @permission_classes([IsAuthenticated])
+# def new_product(request):
+#     data = request.data
+#     category_name = data.get("category", [])[0:]
+
+#     print(f"Attempting to find category with name: '{category_name}'")
+
+#     try:
+#         category = Category.objects.get(name__iexact=category_name)
+#     except Category.DoesNotExist:
+#         return Response({"error": f'Category "{category_name}" does not exist'})
+
+#     # Assign the Category instance to the data dictionary
+#     data["category"] = category.id
+#     serializer = ProductSerializer(data=data)
+
+#     print("Data Serializers: ", serializer)
+#     print("serializer.is_valid() STATUS: ", serializer.is_valid())
+#     print(serializer.errors)
+#     if serializer.is_valid():
+#         # product = Product.objects.create(**data) # , user=request.user
+#         # res = ProductSerializer(product)
+#         product = serializer.save()
+#         res = ProductSerializer(product)
+#         return Response({"product": res.data}, status=status.HTTP_201_CREATED)
+
+#     return Response({"error": "invalid data"})
+
 @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
 def new_product(request):
     data = request.data
-    category_name = data.get("category", [])[0:]
+    category_name = data.get("category", None)  # Avoid slicing [0:] here
 
-    print(f"Attempting to find category with name: '{category_name}'")
+
+    if category_name is None:
+        return Response({"error": "Category field is required"})
+
+    category_name = category_name.strip('"')  # Clean category name from quotes
 
     try:
         category = Category.objects.get(name__iexact=category_name)
@@ -70,19 +103,25 @@ def new_product(request):
 
     # Assign the Category instance to the data dictionary
     data["category"] = category.id
+
+    # Clean is_deleted field from quotes and convert to boolean if necessary
+    is_deleted = data.get("is_deleted")
+    if is_deleted is not None:
+        data["is_deleted"] = is_deleted.strip('"').lower() == "true"
+
     serializer = ProductSerializer(data=data)
 
-    print("Data Serializers: ", serializer)
-    print("serializer.is_valid() STATUS: ", serializer.is_valid())
-    print(serializer.errors)
+    # print("Data Serializers: ", serializer)
+    # print("serializer.is_valid() STATUS: ", serializer.is_valid())
+    # print(serializer.errors)
+
     if serializer.is_valid():
-        # product = Product.objects.create(**data) # , user=request.user
-        # res = ProductSerializer(product)
         product = serializer.save()
         res = ProductSerializer(product)
         return Response({"product": res.data}, status=status.HTTP_201_CREATED)
 
-    return Response({"error": "invalid data"})
+    return Response({"error": serializer.errors})
+
 
 
 # Admin Edit Product
@@ -169,7 +208,10 @@ def get_offers(request):
 @api_view(["POST"])
 def add_offers(request):
     data = request.data
-    offer = Offer.objects.create(image=data["image"])
+    # offer = Offer.objects.create(image=data["image"])
+    offer = Offer.objects.create(image=data['image'],
+                                 start_date=data['start_date'],
+                                 end_date=data['end_date'])
     offer.save()
     serializer = OfferSerializer(offer)
     return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
@@ -191,5 +233,4 @@ def update_offers(request, id):
 def delete_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
     offer.delete()
-
     return Response({"Offer": "Deleted Successfully"})
