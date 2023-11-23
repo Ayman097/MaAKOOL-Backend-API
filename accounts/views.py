@@ -15,7 +15,9 @@ from .serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     ProfileImageSerializer,
+    EmailVerificationSerializer
 )
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
@@ -40,7 +42,7 @@ class ProfileImageUpdateView(generics.UpdateAPIView):
         instance = self.get_object()
         serializer.save(user=instance.user)
 
-
+#####################################################
 # class RegisterView(generics.CreateAPIView):
 #     queryset = User.objects.all()
 #     serializer_class = UserSerializer
@@ -48,12 +50,6 @@ class ProfileImageUpdateView(generics.UpdateAPIView):
 #     def create(self, request, *args, **kwargs):
 #         serializer = self.get_serializer(data=request.data)
 #         serializer.is_valid(raise_exception=True)
-
-#         # verify the account by number
-#         phone = serializer.validated_data.get("profile", {}).get("phone")
-#         verification_code = serializer.validated_data.get("verification_code")
-#         verification_code = get_random_string(length=6, allowed_chars='0123456789')
-
 
 #         user = serializer.save()
 
@@ -64,7 +60,10 @@ class ProfileImageUpdateView(generics.UpdateAPIView):
 #         }
 
 #         return Response(data)
-
+#################################################
+from django.core.mail import send_mail
+from django.conf import settings
+import secrets
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -74,34 +73,54 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        phone = serializer.validated_data.get("profile", {}).get("phone")
-        verification_code = serializer.validated_data.get("verification_code")
-
-
-        def get_stored_verification_code_for_phone(phone_number):
-            try:
-                phone_verification = PhoneVerificationCode.objects.get(phone_number=phone_number)
-                return phone_verification.verification_code
-            except PhoneVerificationCode.DoesNotExist:
-                return None
-
-        # Check if the phone number and verification code are valid
-        # This might involve sending the code and verifying it
-
-        # Dummy code to simulate verification
-        stored_verification_code = get_stored_verification_code_for_phone(phone)
-        if verification_code != stored_verification_code:
-            raise ValidationError("Invalid verification code. Please provide the correct code.")
-
         user = serializer.save()
+
+        # Generate verification code
+        verification_code = secrets.token_urlsafe(16)  # Generate a random code
+
+        # Save verification code to the user's profile
+        user.profile.verification_code = verification_code
+        user.profile.save()
+
+        # Send email with verification code
+        send_mail(
+            'Verification Code',
+            f'Your verification code is: {verification_code}',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
+        return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
+
+from rest_framework import generics, status
+from rest_framework.response import Response
+
+class EmailVerificationView(generics.GenericAPIView):
+    serializer_class = EmailVerificationSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        email = validated_data.get('email')
+
+        user = User.objects.get(email=email)
+        user.profile.is_verified = True
+        user.profile.save()
 
         refresh = RefreshToken.for_user(user)
         data = {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }
+        return Response(data, status=status.HTTP_200_OK)
 
-        return Response(data)
+
+
+
+#################################################
 
 
 
@@ -112,8 +131,15 @@ class UserLoginView(TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        response = super().post(request, *args, **kwargs)
         user = serializer.user
+
+        if not user.profile.is_verified:
+            return Response(
+                {"detail": "Account not verified. Please verify your account."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        response = super().post(request, *args, **kwargs)
 
         refresh = response.data["refresh"]
         access = response.data["access"]
@@ -127,6 +153,7 @@ class UserLoginView(TokenObtainPairView):
 
         response.data.update({"user": user_data})
         return response
+
 
 
 class StaffLoginView(TokenObtainPairView):

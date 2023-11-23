@@ -1,6 +1,10 @@
 from rest_framework import serializers, validators
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
+# from .utils import send_verification_email
+# from django.utils.crypto import get_random_string
+
+
 
 
 class ProfileImageSerializer(serializers.ModelSerializer):
@@ -18,60 +22,20 @@ class ProfileSerializerView(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     username = serializers.CharField(source="user.username")
+    verification_code = serializers.CharField(write_only=True)
 
     class Meta:
         model = Profile
-        fields = ("email", "username", "address", "phone", "image")
-
-
-# class UserSerializer(serializers.ModelSerializer):
-#     profile = ProfileSerializerView()
-#     password2 = serializers.CharField(write_only=True)
-
-#     verification_code = serializers.CharField(write_only=True)
-
-
-#     class Meta:
-#         model = User
-#         fields = ("id", "username", "email", "password", "password2", "profile", "verification_code")
-#         extra_kwargs = {
-#             "password": {"write_only": True},
-#         }
-
-#     def validate(self, data):
-#         if data["password"] != data["password2"]:
-#             raise serializers.ValidationError("Passwords do not match.")
-#         return data
-
-#     def create(self, validated_data):
-#         validated_data.pop("password2")
-
-#         profile_data = validated_data.pop("profile")
-
-#         user = User.objects.create_user(**validated_data)
-
-#         existing_profile = user.profile
-
-#         if existing_profile:
-#             existing_profile.address = profile_data.get(
-#                 "address", existing_profile.address
-#             )
-#             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
-#             existing_profile.save()
-#         else:
-#             Profile.objects.create(user=user, **profile_data)
-
-#         return user
+        fields = ("email", "username", "address", "phone", "image", "verification_code")
 
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
-    verification_code = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "password2", "profile", "verification_code")
+        fields = ("id", "username", "email", "password", "password2", "profile")
         extra_kwargs = {
             "password": {"write_only": True},
         }
@@ -84,28 +48,45 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("password2")
 
-        # Ensure the verification code matches what was sent
-        provided_verification_code = validated_data.pop("verification_code")
-        phone = validated_data.get("profile", {}).get("phone")
-        stored_verification_code = get_stored_verification_code_for_phone(phone)  # Replace with your logic to retrieve stored verification code
-
-        if provided_verification_code != stored_verification_code:
-            raise ValidationError("Invalid verification code. Please provide the correct code.")
-
         profile_data = validated_data.pop("profile")
+        verification_code = profile_data.pop("verification_code", None)
 
         user = User.objects.create_user(**validated_data)
 
-        existing_profile = user.profile
+        # Get or create a profile for the user
+        existing_profile, created = Profile.objects.get_or_create(user=user, defaults=profile_data)
 
-        if existing_profile:
+        # Update profile data if it already exists
+        if not created:
             existing_profile.address = profile_data.get("address", existing_profile.address)
             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
             existing_profile.save()
-        else:
-            Profile.objects.create(user=user, **profile_data)
+
+        # Save the verification code to the user's profile
+        existing_profile.verification_code = verification_code
+        existing_profile.save()
 
         return user
+
+class EmailVerificationSerializer(serializers.Serializer):
+    verification_code = serializers.CharField()
+    email = serializers.EmailField()
+
+    def validate(self, data):
+        verification_code = data.get('verification_code')
+        email = data.get('email')
+
+        if not verification_code or not email:
+            raise serializers.ValidationError("Email and verification code are required.")
+
+        try:
+            user = User.objects.get(email=email)
+            if verification_code != user.profile.verification_code:
+                raise serializers.ValidationError("Invalid verification code")
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found")
+
+        return data
 
 
 
@@ -121,18 +102,20 @@ class UserLoginSerializer(serializers.Serializer):
             user = User.objects.filter(email=email).first()
 
             if user and user.check_password(password):
+                if not user.profile.is_verified:  # Check if the user account is not verified
+                    raise serializers.ValidationError("Account not verified. Please verify your account.")
+
                 refresh = RefreshToken.for_user(user)
                 data["refresh"] = str(refresh)
                 data["access"] = str(refresh.access_token)
                 self.user = user
             else:
-                raise serializers.ValidationError(
-                    "Invalid credentials. Please try again."
-                )
+                raise serializers.ValidationError("Invalid credentials. Please try again.")
         else:
             raise serializers.ValidationError("Both email and password are required.")
 
         return data
+
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
