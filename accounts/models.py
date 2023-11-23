@@ -59,3 +59,13 @@ class RevokedToken(models.Model):
     @classmethod
     def is_blacklisted(cls, token):
         return cls.objects.filter(token=token).exists()
+
+
+class ContactUsModel(models.Model):
+    email = models.EmailField()
+    name = models.CharField(max_length=50)
+    phone = models.CharField(max_length=11)
+    text = models.TextField(max_length=300)
+
+    def __str__(self):
+        return f"{self.name}"

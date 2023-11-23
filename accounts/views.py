@@ -1,8 +1,13 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics
+from rest_framework.generics import ListCreateAPIView
+
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User, RevokedToken, Profile
+
+from rest_framework.exceptions import ParseError
+from .models import ContactUsModel, User, RevokedToken, Profile
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
@@ -237,23 +242,9 @@ class PasswordResetConfirmView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ContactUsView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = ContactUsSerializer(data=request.data)
-        if serializer.is_valid():
-            subject = "Contact Us Form Submission"
-            message = f"""
-            Name: {serializer.validated_data["name"]}
-            Email: {serializer.validated_data["email"]}
-            Phone: {serializer.validated_data["phone"]}
-            
-            Feedback:
-            {serializer.validated_data["feedback"]}
-            """
-            from_email = "a7med74yaso@gmail.com"
-            recipient_list = ["a7med74yaso@gmail.com", "imamahdi22@gmail.com"]
+class ContactUsView(ListCreateAPIView):
+    serializer_class = ContactUsSerializer
+    pagination_class = PageNumberPagination
 
-            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        return ContactUsModel.objects.all()
