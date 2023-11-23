@@ -15,6 +15,15 @@ class ProfileSerializerView(serializers.ModelSerializer):
         fields = ("address", "phone")
 
 
+class ProfileSerializerUp(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username")
+
+    class Meta:
+        model = Profile
+        fields = ("email", "username", "address", "phone", "image")
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     username = serializers.CharField(source="user.username")
@@ -116,7 +125,7 @@ class UserLoginSerializer(serializers.Serializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=False)
     password = serializers.CharField(write_only=True, required=False)
-    profile = ProfileSerializer(required=False)  # Include ProfileSerializer here
+    profile = ProfileSerializerUp(required=False)  # Include ProfileSerializer here
     token = serializers.SerializerMethodField()
 
     class Meta:
