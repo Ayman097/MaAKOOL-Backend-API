@@ -177,7 +177,13 @@ def submit_order(request):
     raise AuthenticationFailed("User not found.")
 
 
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from rest_framework.pagination import PageNumberPagination
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = "page_size"
+    max_page_size = 1000
 
 
 @api_view()
@@ -187,43 +193,35 @@ def userOrders(request, id):
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    sortOrder = request.query_params.get("sortOrder", "desc")
-    page = request.query_params.get("page", 1)
+    order_direction = request.query_params.get("order", "asc")
+    ordering = "creating_date" if order_direction == "asc" else "-creating_date"
 
     userOrders = (
-        Order.objects.filter(user=user, ordered=True)
-        .order_by(f"-creating_date" if sortOrder == "desc" else "creating_date")
-        .distinct()
+        Order.objects.filter(user=user, ordered=True).order_by(ordering).distinct()
     )
 
-    paginator = Paginator(userOrders, 3)
-    try:
-        userOrders_page = paginator.page(page)
-    except PageNotAnInteger:
-        userOrders_page = paginator.page(1)
-    except EmptyPage:
-        userOrders_page = paginator.page(paginator.num_pages)
+    paginator = CustomPageNumberPagination()
+    result_page = paginator.paginate_queryset(userOrders, request)
 
-    if userOrders_page.has_other_pages():
-        next_page = userOrders_page.next_page_number()
-        prev_page = userOrders_page.previous_page_number()
+    if userOrders.exists():
+        userOrderSerializer = DetailedOrderSerializer(result_page, many=True)
+        return Response(
+            {
+                "userOrders": userOrderSerializer.data,
+                "total_pages": paginator.page.paginator.num_pages,
+            },
+            status=status.HTTP_200_OK,
+        )
     else:
-        next_page = None
-        prev_page = None
-
-    userOrderSerializer = DetailedOrderSerializer(userOrders_page, many=True)
-
-    return Response(
-        {
-            "userOrders": userOrderSerializer.data,
-            "next_page": next_page,
-            "prev_page": prev_page,
-        },
-        status=status.HTTP_200_OK,
-    )
+        return Response(
+            {"message": "No ordered items found for this user"},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 stripe.api_key = "sk_test_51OCud2FDejSiAyCJUmWs68SyHkOowWlNeEsLalIe68YyofMjj0ZGVus9fp6W70f714Cme4ccTZODayIKKjuUTAm3004u6PetAI"
+
+# Set up logging
 logger = logging.getLogger(__name__)
 
 
@@ -263,5 +261,6 @@ def create_checkout_session(request):
         )
 
     except Exception as e:
+        # Log the error for debugging purposes
         logger.exception("Error creating Checkout Session:")
         return JsonResponse({"error": str(e)}, status=500)
