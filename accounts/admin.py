@@ -1,5 +1,5 @@
 from django.contrib import admin
-from accounts.models import ContactUsModel, User, Profile
+from accounts.models import ContactUsModel, User, Profile   
 
 
 class UserAdmin(admin.ModelAdmin):
