@@ -37,7 +37,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
-
     class Meta:
         model = User
         fields = ("id", "username", "email", "password", "password2", "profile")
@@ -51,25 +50,24 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop("password2")
 
+        validated_data.pop("password2")
         profile_data = validated_data.pop("profile")
         verification_code = profile_data.pop("verification_code", None)
 
         user = User.objects.create_user(**validated_data)
-
         # Get or create a profile for the user
-        existing_profile, created = Profile.objects.get_or_create(user=user, defaults=profile_data)
+        existing_profile = user.profile
 
-        # Update profile data if it already exists
-        if not created:
-            existing_profile.address = profile_data.get("address", existing_profile.address)
+        if existing_profile:
+            existing_profile.address = profile_data.get(
+                "address", existing_profile.address
+            )
             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
+            existing_profile.verification_code = verification_code
             existing_profile.save()
-
-        # Save the verification code to the user's profile
-        existing_profile.verification_code = verification_code
-        existing_profile.save()
+        else:
+            Profile.objects.create(user=user, **profile_data)
 
         return user
 
