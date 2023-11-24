@@ -23,4 +23,7 @@ urlpatterns = [
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("contact_us/", ContactUsView.as_view(), name="contact_us"),
+
+    path('products/<int:id>/review',  add_review, name='add_review'),
+    path('products/<int:id>/dreview',  delate_review, name='delate_review'),
 ]
