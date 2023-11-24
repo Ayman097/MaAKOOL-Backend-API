@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
-from app.models import SoftDeleteModel
+from app.models import SoftDeleteModel, Product
 
 
 class User(AbstractUser, SoftDeleteModel):
@@ -59,3 +59,14 @@ class RevokedToken(models.Model):
     @classmethod
     def is_blacklisted(cls, token):
         return cls.objects.filter(token=token).exists()
+
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, null=True,on_delete=models.SET_NULL)
+    comment = models.TextField(max_length=1000)
+    rating = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.comment} | {self.product.name}"
