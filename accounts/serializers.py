@@ -1,6 +1,6 @@
 from rest_framework import serializers, validators
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Profile
+from .models import User, Profile, Review
 
 
 class ProfileImageSerializer(serializers.ModelSerializer):
@@ -184,3 +184,9 @@ class ContactUsSerializer(serializers.Serializer):
                 "Phone number must be exactly 11 characters."
             )
         return value
+
+
+class ReviewsSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = '__all__'
