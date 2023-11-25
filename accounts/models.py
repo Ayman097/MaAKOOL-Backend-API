@@ -2,7 +2,8 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
-from app.models import SoftDeleteModel
+from app.models import Product, SoftDeleteModel
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class User(AbstractUser, SoftDeleteModel):
@@ -69,3 +70,42 @@ class ContactUsModel(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+
+
+# class Rating(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+#     rating = models.IntegerField(
+#         validators=[MaxValueValidator(5), MinValueValidator(1)]
+#     )
+
+#     class Meta:
+#         unique_together = (
+#             "user",
+#             "product",
+#         )
+
+#     def __str__(self):
+#         return f"{self.user.username} - {self.product.name} - {self.rating}"
+
+
+class Rating(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    rating = models.IntegerField(
+        validators=[MaxValueValidator(5), MinValueValidator(1)]
+    )
+
+    class Meta:
+        unique_together = ("user", "product")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name} - {self.rating}"
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        self.product.update_average_rating()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.product.update_average_rating()
