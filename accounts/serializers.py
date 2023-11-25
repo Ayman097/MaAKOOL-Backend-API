@@ -15,7 +15,7 @@ class ProfileSerializerView(serializers.ModelSerializer):
         fields = ("address", "phone")
 
 
-class ProfileSerializer(serializers.ModelSerializer):
+class ProfileSerializerUp(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     username = serializers.CharField(source="user.username")
 
@@ -24,10 +24,19 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ("email", "username", "address", "phone", "image")
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username")
+    verification_code = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ("email", "username", "address", "phone", "image", "verification_code")
+
+
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
-
     class Meta:
         model = User
         fields = ("id", "username", "email", "password", "password2", "profile")
@@ -41,12 +50,13 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop("password2")
 
+        validated_data.pop("password2")
         profile_data = validated_data.pop("profile")
+        verification_code = profile_data.pop("verification_code", None)
 
         user = User.objects.create_user(**validated_data)
-
+        # Get or create a profile for the user
         existing_profile = user.profile
 
         if existing_profile:
@@ -54,11 +64,33 @@ class UserSerializer(serializers.ModelSerializer):
                 "address", existing_profile.address
             )
             existing_profile.phone = profile_data.get("phone", existing_profile.phone)
+            existing_profile.verification_code = verification_code
             existing_profile.save()
         else:
             Profile.objects.create(user=user, **profile_data)
 
         return user
+
+
+class EmailVerificationSerializer(serializers.Serializer):
+    verification_code = serializers.CharField()
+    email = serializers.EmailField()
+
+    def validate(self, data):
+        verification_code = data.get('verification_code')
+        email = data.get('email')
+
+        if not verification_code or not email:
+            raise serializers.ValidationError("Email and verification code are required.")
+
+        try:
+            user = User.objects.get(email=email)
+            if verification_code != user.profile.verification_code:
+                raise serializers.ValidationError("Invalid verification code")
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found")
+
+        return data
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -73,14 +105,15 @@ class UserLoginSerializer(serializers.Serializer):
             user = User.objects.filter(email=email).first()
 
             if user and user.check_password(password):
+                if not user.profile.is_verified:  # Check if the user account is not verified
+                    raise serializers.ValidationError("Account not verified. Please verify your account.")
+
                 refresh = RefreshToken.for_user(user)
                 data["refresh"] = str(refresh)
                 data["access"] = str(refresh.access_token)
                 self.user = user
             else:
-                raise serializers.ValidationError(
-                    "Invalid credentials. Please try again."
-                )
+                raise serializers.ValidationError("Invalid credentials. Please try again.")
         else:
             raise serializers.ValidationError("Both email and password are required.")
 
@@ -90,7 +123,7 @@ class UserLoginSerializer(serializers.Serializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=False)
     password = serializers.CharField(write_only=True, required=False)
-    profile = ProfileSerializer(required=False)  # Include ProfileSerializer here
+    profile = ProfileSerializerUp(required=False)  # Include ProfileSerializer here
     token = serializers.SerializerMethodField()
 
     class Meta:

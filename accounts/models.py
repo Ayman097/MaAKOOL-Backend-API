@@ -31,6 +31,8 @@ class Profile(SoftDeleteModel, models.Model):
     address = models.CharField(max_length=1000)
     phone = models.CharField(null=True, max_length=11)
     image = models.ImageField(null=True, blank=True, upload_to="user_image/")
+    is_verified = models.BooleanField(default=False)
+    verification_code = models.CharField(max_length=100, blank=True, null=True)
 
     def get_queryset(self, request):
         return self.model.all_objects.get_queryset()

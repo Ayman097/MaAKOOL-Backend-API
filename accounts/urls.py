@@ -21,6 +21,7 @@ urlpatterns = [
         ProfileImageUpdateView.as_view(),
         name="profile-image-update",
     ),
+    path('verify-email/', EmailVerificationView.as_view(), name='verify_email'),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("contact_us/", ContactUsView.as_view(), name="contact_us"),
 ]

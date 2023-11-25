@@ -151,17 +151,16 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
 
-# from .env import EMAIL_PASS, EMAIL_PASS
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_TLS = True
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
-# EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_HOST_USER = "a7med74yaso@gmail.com"
+EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
+
+
 
 MEDIA_URL = "/products/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-EMAIL_HOST_USER = "a7med74yaso@gmail.com"
-EMAIL_HOST_PASSWORD = "izsy isct nqpu evub"
