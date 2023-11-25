@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -15,17 +15,18 @@ from .serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     ProfileImageSerializer,
+    EmailVerificationSerializer
 )
+from django.conf import settings
 from rest_framework.views import APIView
-from rest_framework import status
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.http import HttpResponseBadRequest
 from django.utils.encoding import force_bytes
+import secrets
 
 
 class ProfileImageUpdateView(generics.UpdateAPIView):
@@ -49,14 +50,40 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        verification_code = secrets.token_urlsafe(16)
+        user.profile.verification_code = verification_code
+        user.profile.save()
+        send_mail(
+            'Verification Code',
+            f'Your verification code is: {verification_code}',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
+        return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
+
+
+class EmailVerificationView(generics.GenericAPIView):
+    serializer_class = EmailVerificationSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        email = validated_data.get('email')
+
+        user = User.objects.get(email=email)
+        user.profile.is_verified = True
+        user.profile.save()
 
         refresh = RefreshToken.for_user(user)
         data = {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }
-
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class UserLoginView(TokenObtainPairView):
@@ -66,8 +93,15 @@ class UserLoginView(TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        response = super().post(request, *args, **kwargs)
         user = serializer.user
+
+        if not user.profile.is_verified:
+            return Response(
+                {"detail": "Account not verified. Please verify your account."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        response = super().post(request, *args, **kwargs)
 
         refresh = response.data["refresh"]
         access = response.data["access"]
@@ -246,7 +280,7 @@ class ContactUsView(APIView):
             Name: {serializer.validated_data["name"]}
             Email: {serializer.validated_data["email"]}
             Phone: {serializer.validated_data["phone"]}
-            
+
             Feedback:
             {serializer.validated_data["feedback"]}
             """
