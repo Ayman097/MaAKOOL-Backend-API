@@ -1,8 +1,6 @@
 from django.db import models
 from django.utils.html import mark_safe
-
-# Create your models here.
-from django.db import models
+from django.db.models import Avg
 
 
 class SoftDeleteManager(models.Manager):
@@ -40,9 +38,7 @@ class Offer(SoftDeleteModel, models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     def img_preview(self):
-        return mark_safe(
-            f'<img src = "{self.image.url}" width = "200" height = "200"/>'
-        )
+        return mark_safe(f'<img src="{self.image.url}" width="200" height="200"/>')
 
 
 class Product(SoftDeleteModel, models.Model):
@@ -51,11 +47,24 @@ class Product(SoftDeleteModel, models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to="products/")
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    avg_rating = models.FloatField(default=1)
+    total_ratings = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
 
     def img_preview(self):
-        return mark_safe(
-            f'<img src = "{self.image.url}" width = "200" height = "200"/>'
-        )
+        return mark_safe(f'<img src="{self.image.url}" width="200" height="200"/>')
+
+    def update_average_rating(self):
+        from accounts.models import Rating
+
+        ratings = Rating.objects.filter(product=self)
+        total_ratings = ratings.count()
+        if total_ratings > 0:
+            avg_rating = ratings.aggregate(Avg("rating"))["rating__avg"]
+            self.avg_rating = avg_rating if avg_rating else 0
+            self.total_ratings = total_ratings
+            self.save()
+
+        return self.avg_rating, self.total_ratings

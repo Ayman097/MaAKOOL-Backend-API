@@ -1,8 +1,13 @@
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, status
+from rest_framework.generics import ListCreateAPIView
+
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User, RevokedToken, Profile
+
+from rest_framework.exceptions import ParseError
+from .models import ContactUsModel, User, RevokedToken, Profile
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
@@ -15,7 +20,7 @@ from .serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     ProfileImageSerializer,
-    EmailVerificationSerializer
+    EmailVerificationSerializer,
 )
 from django.conf import settings
 from rest_framework.views import APIView
@@ -54,14 +59,16 @@ class RegisterView(generics.CreateAPIView):
         user.profile.verification_code = verification_code
         user.profile.save()
         send_mail(
-            'Verification Code',
-            f'Your verification code is: {verification_code}',
+            "Verification Code",
+            f"Your verification code is: {verification_code}",
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
             fail_silently=False,
         )
 
-        return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Verification code sent"}, status=status.HTTP_200_OK
+        )
 
 
 class EmailVerificationView(generics.GenericAPIView):
@@ -72,7 +79,7 @@ class EmailVerificationView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
-        email = validated_data.get('email')
+        email = validated_data.get("email")
 
         user = User.objects.get(email=email)
         user.profile.is_verified = True
@@ -98,7 +105,7 @@ class UserLoginView(TokenObtainPairView):
         if not user.profile.is_verified:
             return Response(
                 {"detail": "Account not verified. Please verify your account."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         response = super().post(request, *args, **kwargs)
@@ -271,23 +278,9 @@ class PasswordResetConfirmView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ContactUsView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = ContactUsSerializer(data=request.data)
-        if serializer.is_valid():
-            subject = "Contact Us Form Submission"
-            message = f"""
-            Name: {serializer.validated_data["name"]}
-            Email: {serializer.validated_data["email"]}
-            Phone: {serializer.validated_data["phone"]}
+class ContactUsView(ListCreateAPIView):
+    serializer_class = ContactUsSerializer
+    pagination_class = PageNumberPagination
 
-            Feedback:
-            {serializer.validated_data["feedback"]}
-            """
-            from_email = "a7med74yaso@gmail.com"
-            recipient_list = ["a7med74yaso@gmail.com", "imamahdi22@gmail.com"]
-
-            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        return ContactUsModel.objects.all()

@@ -23,7 +23,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 
 class OrderPagination(PageNumberPagination):
-    page_size = 20  # Number of items to include on each page
+    page_size = 3  # Number of items to include on each page
     page_size_query_param = "page_size"
 
     def get_paginated_response(self, data):
@@ -177,6 +177,15 @@ def submit_order(request):
     raise AuthenticationFailed("User not found.")
 
 
+from rest_framework.pagination import PageNumberPagination
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = "page_size"
+    max_page_size = 1000
+
+
 @api_view()
 def userOrders(request, id):
     try:
@@ -184,16 +193,24 @@ def userOrders(request, id):
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    order_direction = request.query_params.get("order", "asc")
+    ordering = "creating_date" if order_direction == "asc" else "-creating_date"
+
     userOrders = (
-        Order.objects.filter(user=user, ordered=True)
-        .order_by("creating_date")
-        .distinct()
+        Order.objects.filter(user=user, ordered=True).order_by(ordering).distinct()
     )
 
+    paginator = CustomPageNumberPagination()
+    result_page = paginator.paginate_queryset(userOrders, request)
+
     if userOrders.exists():
-        userOrderSerializer = DetailedOrderSerializer(userOrders, many=True)
+        userOrderSerializer = DetailedOrderSerializer(result_page, many=True)
         return Response(
-            {"userOrders": userOrderSerializer.data}, status=status.HTTP_200_OK
+            {
+                "userOrders": userOrderSerializer.data,
+                "total_pages": paginator.page.paginator.num_pages,
+            },
+            status=status.HTTP_200_OK,
         )
     else:
         return Response(
@@ -203,6 +220,8 @@ def userOrders(request, id):
 
 
 stripe.api_key = "sk_test_51OCud2FDejSiAyCJUmWs68SyHkOowWlNeEsLalIe68YyofMjj0ZGVus9fp6W70f714Cme4ccTZODayIKKjuUTAm3004u6PetAI"
+
+# Set up logging
 logger = logging.getLogger(__name__)
 
 
@@ -219,7 +238,7 @@ def create_checkout_session(request):
             line_items=[
                 {
                     "price_data": {
-                        "currency": "USD",
+                        "currency": "EGP",
                         "product_data": {
                             "name": "Total",
                             "images": [
@@ -242,5 +261,6 @@ def create_checkout_session(request):
         )
 
     except Exception as e:
+        # Log the error for debugging purposes
         logger.exception("Error creating Checkout Session:")
         return JsonResponse({"error": str(e)}, status=500)

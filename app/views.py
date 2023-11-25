@@ -1,13 +1,16 @@
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
+
+from accounts.models import Rating, User
+
 from .models import Product, Category, Offer
 from .serializers import ProductSerializer, CategorySerializer, OfferSerializer
 from decimal import Decimal
+from rest_framework.views import APIView
+
 from .filters import ProductFilter
 
 
@@ -85,11 +88,11 @@ def category_product_list(request, category_id):
 
 #     return Response({"error": "invalid data"})
 
+
 @api_view(["POST"])
 def new_product(request):
     data = request.data
     category_name = data.get("category", None)  # Avoid slicing [0:] here
-
 
     if category_name is None:
         return Response({"error": "Category field is required"})
@@ -121,7 +124,6 @@ def new_product(request):
         return Response({"product": res.data}, status=status.HTTP_201_CREATED)
 
     return Response({"error": serializer.errors})
-
 
 
 # Admin Edit Product
@@ -209,9 +211,9 @@ def get_offers(request):
 def add_offers(request):
     data = request.data
     # offer = Offer.objects.create(image=data["image"])
-    offer = Offer.objects.create(image=data['image'],
-                                 start_date=data['start_date'],
-                                 end_date=data['end_date'])
+    offer = Offer.objects.create(
+        image=data["image"], start_date=data["start_date"], end_date=data["end_date"]
+    )
     offer.save()
     serializer = OfferSerializer(offer)
     return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
@@ -234,3 +236,54 @@ def delete_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
     offer.delete()
     return Response({"Offer": "Deleted Successfully"})
+
+
+class RateProductView(APIView):
+    def post(self, request):
+        product_id = request.data.get("product_id")
+        user_id = request.data.get("user_id")
+        rating_value = request.data.get("rating_value")
+
+        if not all([product_id, user_id, rating_value]):
+            return Response(
+                {"error": "Incomplete data provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+            product = Product.objects.get(id=product_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User does not exist."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Product does not exist."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            rating, created = Rating.objects.update_or_create(
+                user=user, product=product, defaults={"rating": rating_value}
+            )
+
+            product.update_average_rating()
+
+            updated_product_data = {
+                "avg_rating": product.avg_rating,
+                "total_ratings": product.total_ratings,
+            }
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "Rating updated successfully.",
+                    "product_data": updated_product_data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
