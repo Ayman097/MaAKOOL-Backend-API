@@ -9,10 +9,15 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.ReadOnlyField(source='category.name')
+
+
     class Meta:
         model = Product
         fields = "__all__"
-
+        extra_kwargs = {
+            'image': {'required': False}
+        }
 
 class OfferSerializer(serializers.ModelSerializer):
     class Meta:
