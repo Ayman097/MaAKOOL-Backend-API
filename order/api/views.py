@@ -238,7 +238,7 @@ def create_checkout_session(request):
             line_items=[
                 {
                     "price_data": {
-                        "currency": "USD",
+                        "currency": "EGP",
                         "product_data": {
                             "name": "Total",
                             "images": [
