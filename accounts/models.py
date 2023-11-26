@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -69,6 +70,7 @@ class ContactUsModel(models.Model):
     name = models.CharField(max_length=50)
     phone = models.CharField(max_length=11)
     text = models.TextField(max_length=300)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.name}"
