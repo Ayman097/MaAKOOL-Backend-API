@@ -107,15 +107,16 @@ class UserLoginSerializer(serializers.Serializer):
             user = User.objects.filter(email=email).first()
 
             if user and user.check_password(password):
-                if not user.profile.is_verified:
+                if user.profile.is_verified or user.is_staff:
+                    refresh = RefreshToken.for_user(user)
+                    data["refresh"] = str(refresh)
+                    data["access"] = str(refresh.access_token)
+                    self.user = user
+                else:
                     raise serializers.ValidationError(
                         "Account not verified. Please verify your account."
                     )
 
-                refresh = RefreshToken.for_user(user)
-                data["refresh"] = str(refresh)
-                data["access"] = str(refresh.access_token)
-                self.user = user
             else:
                 raise serializers.ValidationError(
                     "Invalid credentials. Please try again."
