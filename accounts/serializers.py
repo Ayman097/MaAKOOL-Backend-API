@@ -37,6 +37,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializerView()
     password2 = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
         fields = ("id", "username", "email", "password", "password2", "profile")
@@ -50,7 +51,6 @@ class UserSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-
         validated_data.pop("password2")
         profile_data = validated_data.pop("profile")
         verification_code = profile_data.pop("verification_code", None)
@@ -77,11 +77,13 @@ class EmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate(self, data):
-        verification_code = data.get('verification_code')
-        email = data.get('email')
+        verification_code = data.get("verification_code")
+        email = data.get("email")
 
         if not verification_code or not email:
-            raise serializers.ValidationError("Email and verification code are required.")
+            raise serializers.ValidationError(
+                "Email and verification code are required."
+            )
 
         try:
             user = User.objects.get(email=email)
@@ -105,15 +107,19 @@ class UserLoginSerializer(serializers.Serializer):
             user = User.objects.filter(email=email).first()
 
             if user and user.check_password(password):
-                if not user.profile.is_verified:  # Check if the user account is not verified
-                    raise serializers.ValidationError("Account not verified. Please verify your account.")
+                if not user.profile.is_verified:
+                    raise serializers.ValidationError(
+                        "Account not verified. Please verify your account."
+                    )
 
                 refresh = RefreshToken.for_user(user)
                 data["refresh"] = str(refresh)
                 data["access"] = str(refresh.access_token)
                 self.user = user
             else:
-                raise serializers.ValidationError("Invalid credentials. Please try again.")
+                raise serializers.ValidationError(
+                    "Invalid credentials. Please try again."
+                )
         else:
             raise serializers.ValidationError("Both email and password are required.")
 

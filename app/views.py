@@ -196,9 +196,6 @@ def delete_category(request, id):
     return Response({"category": "Deleted Successfully"})
 
 
-# Offers Handling
-
-
 @api_view()
 def get_offers(request):
     offers = Offer.objects.all()
@@ -206,11 +203,9 @@ def get_offers(request):
     return Response(serializer.data)
 
 
-# Add Offer
 @api_view(["POST"])
 def add_offers(request):
     data = request.data
-    # offer = Offer.objects.create(image=data["image"])
     offer = Offer.objects.create(
         image=data["image"], start_date=data["start_date"], end_date=data["end_date"]
     )
@@ -219,7 +214,6 @@ def add_offers(request):
     return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
 
 
-# Update Offer
 @api_view(["PUT"])
 def update_offers(request, id):
     offer = get_object_or_404(Offer, id=id)

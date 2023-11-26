@@ -1,6 +1,6 @@
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, status
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, DestroyAPIView
 
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -278,9 +278,12 @@ class PasswordResetConfirmView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ContactUsView(ListCreateAPIView):
+class ContactUsListView(ListCreateAPIView):
     serializer_class = ContactUsSerializer
     pagination_class = PageNumberPagination
+    queryset = ContactUsModel.objects.all()
 
-    def get_queryset(self):
-        return ContactUsModel.objects.all()
+
+class ContactUsDetailView(DestroyAPIView):
+    serializer_class = ContactUsSerializer
+    queryset = ContactUsModel.objects.all()
