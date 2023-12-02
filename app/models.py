@@ -46,6 +46,7 @@ class Product(SoftDeleteModel, models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to="products/")
+    ratings = models.DecimalField(max_digits=3, decimal_places=1, default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     avg_rating = models.FloatField(default=1)
     total_ratings = models.IntegerField(default=0)
