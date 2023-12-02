@@ -2,8 +2,8 @@
 Information Technology Institute Graduation Project 11/2023.
 Full-Stack React/Django Project.
 
-[Ma'akool (Front-End - Client side)](https://github.com/Ahmeed-Sayed/MaAKOOL-Client-Frontend) 
-[Ma'akool (Front-End - Admin side)](https://github.com/AboAsil301/ITI_Graduation_Project_fast-food-admin)
+-[Ma'akool (Front-End - Client side)](https://github.com/Ahmeed-Sayed/MaAKOOL-Client-Frontend) 
+-[Ma'akool (Front-End - Admin side)](https://github.com/AboAsil301/ITI_Graduation_Project_fast-food-admin)
 
 A platform that brings together people with small, medium and lesser professions who can work from home and tend to deliver orders only to customers with the least means by purchasing products.
 
@@ -15,6 +15,7 @@ Architectural Design:
 ![image](https://github.com/Ayman097/Resturant_iti_api/assets/47431372/961225e5-1c6e-4ad5-869f-c00bec1fd3e2)
   
 Tech Stack:
+
  ![image](https://github.com/Ayman097/Resturant_iti_api/assets/47431372/9bd3ba27-e505-4976-9a43-e034332daedc)
 
 
