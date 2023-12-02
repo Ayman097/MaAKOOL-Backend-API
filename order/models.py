@@ -3,6 +3,8 @@ from app.models import Product
 from accounts.models import User
 from app.models import SoftDeleteModel
 
+from accounts.models import User
+
 
 class Order(SoftDeleteModel, models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

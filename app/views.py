@@ -1,17 +1,19 @@
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
+
+from accounts.models import Rating, User
+
 from .models import Product, Category, Offer
 from .serializers import ProductSerializer, CategorySerializer, OfferSerializer
 from decimal import Decimal
+from rest_framework.views import APIView
+
 from .filters import ProductFilter
 
 
-# Create your views here.
 @api_view()
 def product_list(request):
     products = Product.objects.all()
@@ -53,67 +55,28 @@ def category_product_list(request, category_id):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-# For Admin Dashboard
-
-# # Create Product
-# @api_view(["POST"])
-# # @permission_classes([IsAuthenticated])
-# def new_product(request):
-#     data = request.data
-#     category_name = data.get("category", [])[0:]
-
-#     print(f"Attempting to find category with name: '{category_name}'")
-
-#     try:
-#         category = Category.objects.get(name__iexact=category_name)
-#     except Category.DoesNotExist:
-#         return Response({"error": f'Category "{category_name}" does not exist'})
-
-#     # Assign the Category instance to the data dictionary
-#     data["category"] = category.id
-#     serializer = ProductSerializer(data=data)
-
-#     print("Data Serializers: ", serializer)
-#     print("serializer.is_valid() STATUS: ", serializer.is_valid())
-#     print(serializer.errors)
-#     if serializer.is_valid():
-#         # product = Product.objects.create(**data) # , user=request.user
-#         # res = ProductSerializer(product)
-#         product = serializer.save()
-#         res = ProductSerializer(product)
-#         return Response({"product": res.data}, status=status.HTTP_201_CREATED)
-
-#     return Response({"error": "invalid data"})
-
 @api_view(["POST"])
 def new_product(request):
     data = request.data
-    category_name = data.get("category", None)  # Avoid slicing [0:] here
-
+    category_name = data.get("category", None)
 
     if category_name is None:
         return Response({"error": "Category field is required"})
 
-    category_name = category_name.strip('"')  # Clean category name from quotes
+    category_name = category_name.strip('"')
 
     try:
         category = Category.objects.get(name__iexact=category_name)
     except Category.DoesNotExist:
         return Response({"error": f'Category "{category_name}" does not exist'})
 
-    # Assign the Category instance to the data dictionary
     data["category"] = category.id
 
-    # Clean is_deleted field from quotes and convert to boolean if necessary
     is_deleted = data.get("is_deleted")
     if is_deleted is not None:
         data["is_deleted"] = is_deleted.strip('"').lower() == "true"
 
     serializer = ProductSerializer(data=data)
-
-    # print("Data Serializers: ", serializer)
-    # print("serializer.is_valid() STATUS: ", serializer.is_valid())
-    # print(serializer.errors)
 
     if serializer.is_valid():
         product = serializer.save()
@@ -123,15 +86,9 @@ def new_product(request):
     return Response({"error": serializer.errors})
 
 
-
-# Admin Edit Product
 @api_view(["PUT"])
-# @permission_classes([IsAuthenticated])
 def edit_product(request, id):
     product = get_object_or_404(Product, pk=id)
-
-    # if product.user != request.user:
-    #     return Response({'Error': "You can't Update  this product"}, status=status.HTTP_401_UNAUTHORIZED)
 
     product.name = request.data["name"]
     product.description = request.data["description"]
@@ -148,21 +105,15 @@ def edit_product(request, id):
     return Response({"product": serializer.data})
 
 
-# Delete Product
 @api_view(["DELETE"])
-# @permission_classes([IsAuthenticated])
 def delete_product(request, id):
     product = get_object_or_404(Product, pk=id)
-
-    # if product.user != request.user:
-    #     return Response({'Error': "You can't Update  this product"}, status=status.HTTP_401_UNAUTHORIZED)
 
     product.delete()
 
     return Response({"product": "Deleted Successfully"})
 
 
-# Create Category
 @api_view(["POST"])
 def new_category(request):
     data = request.data
@@ -173,7 +124,6 @@ def new_category(request):
     return Response(serializer.data)
 
 
-# Update Category
 @api_view(["PUT"])
 def update_category(request, id):
     category = get_object_or_404(Category, pk=id)
@@ -185,16 +135,12 @@ def update_category(request, id):
     return Response(serializer.data)
 
 
-# Delete Category
 @api_view(["DELETE"])
 def delete_category(request, id):
     category = get_object_or_404(Category, pk=id)
     category.delete()
 
     return Response({"category": "Deleted Successfully"})
-
-
-# Offers Handling
 
 
 @api_view()
@@ -204,20 +150,17 @@ def get_offers(request):
     return Response(serializer.data)
 
 
-# Add Offer
 @api_view(["POST"])
 def add_offers(request):
     data = request.data
-    # offer = Offer.objects.create(image=data["image"])
-    offer = Offer.objects.create(image=data['image'],
-                                 start_date=data['start_date'],
-                                 end_date=data['end_date'])
+    offer = Offer.objects.create(
+        image=data["image"], start_date=data["start_date"], end_date=data["end_date"]
+    )
     offer.save()
     serializer = OfferSerializer(offer)
     return Response({"offer": serializer.data}, status=status.HTTP_201_CREATED)
 
 
-# Update Offer
 @api_view(["PUT"])
 def update_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
@@ -234,3 +177,54 @@ def delete_offers(request, id):
     offer = get_object_or_404(Offer, id=id)
     offer.delete()
     return Response({"Offer": "Deleted Successfully"})
+
+
+class RateProductView(APIView):
+    def post(self, request):
+        product_id = request.data.get("product_id")
+        user_id = request.data.get("user_id")
+        rating_value = request.data.get("rating_value")
+
+        if not all([product_id, user_id, rating_value]):
+            return Response(
+                {"error": "Incomplete data provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+            product = Product.objects.get(id=product_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User does not exist."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Product does not exist."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            rating, created = Rating.objects.update_or_create(
+                user=user, product=product, defaults={"rating": rating_value}
+            )
+
+            product.update_average_rating()
+
+            updated_product_data = {
+                "avg_rating": product.avg_rating,
+                "total_ratings": product.total_ratings,
+            }
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "Rating updated successfully.",
+                    "product_data": updated_product_data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

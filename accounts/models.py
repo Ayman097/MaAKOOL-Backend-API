@@ -1,8 +1,10 @@
+from django.utils import timezone
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
-from app.models import SoftDeleteModel, Product
+from app.models import Product, SoftDeleteModel
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class User(AbstractUser, SoftDeleteModel):
@@ -30,6 +32,8 @@ class Profile(SoftDeleteModel, models.Model):
     address = models.CharField(max_length=1000)
     phone = models.CharField(null=True, max_length=11)
     image = models.ImageField(null=True, blank=True, upload_to="user_image/")
+    is_verified = models.BooleanField(default=False)
+    verification_code = models.CharField(max_length=100, blank=True, null=True)
 
     def get_queryset(self, request):
         return self.model.all_objects.get_queryset()
@@ -61,12 +65,34 @@ class RevokedToken(models.Model):
         return cls.objects.filter(token=token).exists()
 
 
-class Review(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
-    user = models.ForeignKey(User, null=True,on_delete=models.SET_NULL)
-    comment = models.TextField(max_length=1000)
-    rating = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
+class ContactUsModel(models.Model):
+    email = models.EmailField()
+    name = models.CharField(max_length=50)
+    phone = models.CharField(max_length=11)
+    text = models.TextField(max_length=300)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.comment} | {self.product.name}"
+        return f"{self.name}"
+
+
+class Rating(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    rating = models.IntegerField(
+        validators=[MaxValueValidator(5), MinValueValidator(1)]
+    )
+
+    class Meta:
+        unique_together = ("user", "product")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name} - {self.rating}"
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        self.product.update_average_rating()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.product.update_average_rating()

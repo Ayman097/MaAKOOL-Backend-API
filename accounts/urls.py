@@ -21,9 +21,12 @@ urlpatterns = [
         ProfileImageUpdateView.as_view(),
         name="profile-image-update",
     ),
+    path("verify-email/", EmailVerificationView.as_view(), name="verify_email"),
     path("logout/", LogoutView.as_view(), name="logout"),
-    path("contact_us/", ContactUsView.as_view(), name="contact_us"),
-
-    path('products/<int:id>/review',  add_review, name='add_review'),
-    path('products/<int:id>/dreview',  delate_review, name='delate_review'),
+    path("contact_us/", ContactUsListView.as_view(), name="contact_us"),
+    path(
+        "contact_us/<int:pk>/delete/",
+        ContactUsDetailView.as_view(),
+        name="contact_us_delete",
+    ),
 ]

@@ -1,8 +1,13 @@
-from rest_framework import generics
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import generics, status
+from rest_framework.generics import ListCreateAPIView, DestroyAPIView
+
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User, RevokedToken, Profile
+
+from rest_framework.exceptions import ParseError
+from .models import ContactUsModel, User, RevokedToken, Profile
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
@@ -15,22 +20,18 @@ from .serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     ProfileImageSerializer,
+    EmailVerificationSerializer,
 )
+from django.conf import settings
 from rest_framework.views import APIView
-from rest_framework import status
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.http import HttpResponseBadRequest
 from django.utils.encoding import force_bytes
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view, permission_classes
-from app.models import Product
-from django.db.models import Avg
-from .models import Review
+import secrets
 
 
 class ProfileImageUpdateView(generics.UpdateAPIView):
@@ -54,14 +55,42 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        verification_code = secrets.token_urlsafe(16)
+        user.profile.verification_code = verification_code
+        user.profile.save()
+        send_mail(
+            "Verification Code",
+            f"Your verification code is: {verification_code}",
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {"message": "Verification code sent"}, status=status.HTTP_200_OK
+        )
+
+
+class EmailVerificationView(generics.GenericAPIView):
+    serializer_class = EmailVerificationSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        email = validated_data.get("email")
+
+        user = User.objects.get(email=email)
+        user.profile.is_verified = True
+        user.profile.save()
 
         refresh = RefreshToken.for_user(user)
         data = {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }
-
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class UserLoginView(TokenObtainPairView):
@@ -71,8 +100,15 @@ class UserLoginView(TokenObtainPairView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        response = super().post(request, *args, **kwargs)
         user = serializer.user
+
+        if not user.profile.is_verified:
+            return Response(
+                {"detail": "Account not verified. Please verify your account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        response = super().post(request, *args, **kwargs)
 
         refresh = response.data["refresh"]
         access = response.data["access"]
@@ -242,79 +278,12 @@ class PasswordResetConfirmView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ContactUsView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = ContactUsSerializer(data=request.data)
-        if serializer.is_valid():
-            subject = "Contact Us Form Submission"
-            message = f"""
-            Name: {serializer.validated_data["name"]}
-            Email: {serializer.validated_data["email"]}
-            Phone: {serializer.validated_data["phone"]}
-            
-            Feedback:
-            {serializer.validated_data["feedback"]}
-            """
-            from_email = "a7med74yaso@gmail.com"
-            recipient_list = ["a7med74yaso@gmail.com", "imamahdi22@gmail.com"]
-
-            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+class ContactUsListView(ListCreateAPIView):
+    serializer_class = ContactUsSerializer
+    pagination_class = PageNumberPagination
+    queryset = ContactUsModel.objects.all()
 
 
-# Rview Products
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def add_review(request, id):
-    user = request.user
-    product = get_object_or_404(Product, pk=id) 
-    data = request.data
-    review = product.reviews.filter(user=user)
-    
-    # To Ensure user give rate between 1 : 5
-    if data['rating'] <= 0 or data['rating'] >= 6:
-        return Response({'Error': "Please Rate between 1 to 5"}, status=status.HTTP_400_BAD_REQUEST)
-    elif review.exists():
-        new_review = {'rating': data['rating'], 'comment': data['comment']}
-        review.update(**new_review)
-
-        # Calculate Avg Rating for product
-        rating = product.reviews.aggregate(avg_ratings = Avg('rating'))
-        product.rateings = rating['avg_ratings']
-        product.save()
-        return Response({'details': 'Review Updated Successfully'}, status=status.HTTP_200_OK)
-    else:
-        Review.objects.create(
-            product = product,
-            user = user,
-            comment = data['comment'],
-            rating = data['rating']   
-        )
-        rating = product.reviews.aggregate(avg_ratings = Avg('rating'))
-        product.rateings = rating['avg_ratings']
-        product.save()
-        return Response({'details': 'Review Created Successfully'}, status=status.HTTP_200_OK)
-    
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delate_review(request, id):
-    user = request.user
-    product = get_object_or_404(Product, pk=id) 
-    review = product.reviews.filter(user=user)
-
-    if review.exists():
-        review.delete()
-        rating = product.reviews.aggregate(avg_ratings = Avg('rating'))
-        if rating['avg_ratings'] is None:
-            rating['avg_ratings'] = 0
-            product.rateings = rating['avg_ratings']
-            product.save()
-            return Response({'details': 'Review Deleted'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'you are not authrized to delete this review'}, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        return Response({'error': 'Review Not found'}, status=status.HTTP_400_BAD_REQUEST)
+class ContactUsDetailView(DestroyAPIView):
+    serializer_class = ContactUsSerializer
+    queryset = ContactUsModel.objects.all()

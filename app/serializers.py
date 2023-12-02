@@ -1,23 +1,20 @@
 from rest_framework import serializers
 from .models import *
-from accounts.serializers import ReviewsSerializers
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.ReadOnlyField(source="category.name")
+
+    class Meta:
+        model = Product
+        fields = "__all__"
+        extra_kwargs = {"image": {"required": False}}
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = "__all__"
-
-
-class ProductSerializer(serializers.ModelSerializer):
-    reviews = serializers.SerializerMethodField(method_name='get_reviews', read_only=True)
-    class Meta:
-        model = Product
-        fields = "__all__"
-
-        def get_reviews(self, obj):
-            reviews = obj.reviews.all()
-            serializer = ReviewsSerializers(reviews, many=True)
-            return serializer.data
 
 
 class OfferSerializer(serializers.ModelSerializer):

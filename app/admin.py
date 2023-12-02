@@ -2,10 +2,7 @@ from django.contrib import admin
 from . import models
 from django.utils.html import format_html
 
-# Register your models here.
 
-
-# @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ["name", "price", "img_preview"]
     list_editable = ["price"]
