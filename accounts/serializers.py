@@ -56,7 +56,6 @@ class UserSerializer(serializers.ModelSerializer):
         verification_code = profile_data.pop("verification_code", None)
 
         user = User.objects.create_user(**validated_data)
-        # Get or create a profile for the user
         existing_profile = user.profile
 
         if existing_profile:
@@ -130,7 +129,7 @@ class UserLoginSerializer(serializers.Serializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=False)
     password = serializers.CharField(write_only=True, required=False)
-    profile = ProfileSerializerUp(required=False)  # Include ProfileSerializer here
+    profile = ProfileSerializerUp(required=False)
     token = serializers.SerializerMethodField()
 
     class Meta:
@@ -173,7 +172,6 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
 
-        # Update profile data if it exists
         profile_data = validated_data.get("profile", {})
         profile_instance = instance.profile
 
